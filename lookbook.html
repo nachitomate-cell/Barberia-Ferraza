@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#FAFAFA">
+  <title>Lookbook | Barbería Premium</title>
+  
+  <!-- Tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Iconos -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#FAFAFA',
+              text: '#111827',
+              accent: '#10B981',
+              accentDark: '#047857'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          animation: {
+            'fade-slide-up': 'fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          },
+          keyframes: {
+            fadeSlideUp: {
+              '0%': { opacity: '0', transform: 'translateY(24px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FAFAFA;
+      color: #111827;
+      overscroll-behavior-y: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Navegación inferior con Glassmorphism */
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    /* Utilidades de espera para animaciones secuenciales */
+    .delay-100 { animation-delay: 100ms; }
+    .delay-200 { animation-delay: 200ms; }
+    
+    /* Para transiciones del Bottom Sheet */
+    .ease-spring { transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.15); }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-32 selection:bg-brand-accent selection:text-white relative">
+  
+  <main class="max-w-md mx-auto pt-12 px-6">
+    <!-- Header del Lookbook -->
+    <header class="flex items-center justify-between mb-8 opacity-0 animate-[fadeSlideUp_0.6s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-brand-text mb-1">Lookbook</h1>
+        <p class="text-sm text-gray-500 font-medium">Inspiración para tu próximo estilo</p>
+      </div>
+      <!-- Botón de filtros ficticio -->
+      <button class="w-12 h-12 bg-white rounded-full border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center active:scale-95 transition-transform">
+         <i class="ph-bold ph-faders text-xl text-brand-text"></i>
+      </button>
+    </header>
+
+    <!-- Masonry Layout Grid -->
+    <!-- columns-2 crea el efecto Pinterest/Masonry nativamente y gap-4 separa las columnas. space-y-4 separa las filas. -->
+    <div class="columns-2 gap-4 space-y-4 opacity-0 animate-[fadeSlideUp_0.6s_cubic-bezier(0.16,1,0.3,1)_forwards] delay-100 pb-10">
+      
+      <!-- Imagen 1: Ratio 3/4 -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Fade Texturizado')">
+        <div class="w-full aspect-[3/4] bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+           <!-- Ícono para simular la imagen fotográfica -->
+           <i class="ph-fill ph-camera text-4xl mb-2 opacity-50"></i>
+        </div>
+        <!-- Capa de oscurecimiento al click -->
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <!-- Badge -->
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">FADE TEXTURIZADO</span>
+        </div>
+      </div>
+
+      <!-- Imagen 2: Ratio 4/5 -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Pompadour Moderno')">
+        <div class="w-full aspect-[4/5] bg-gradient-to-tr from-gray-50 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+           <i class="ph-fill ph-image text-4xl mb-2 opacity-30"></i>
+        </div>
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">POMPADOUR</span>
+        </div>
+      </div>
+
+      <!-- Imagen 3: Ratio 1/1 (Square) -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Buzz Cut / Rapado')">
+        <div class="w-full aspect-square bg-gradient-to-bl from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+           <i class="ph-fill ph-scissors text-4xl mb-2 opacity-40"></i>
+        </div>
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">BUZZ CUT</span>
+        </div>
+      </div>
+
+      <!-- Imagen 4: Ratio 2/3 -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Mullet Texturizado')">
+        <div class="w-full aspect-[2/3] bg-gradient-to-br from-gray-200 via-gray-100 to-gray-50 flex flex-col items-center justify-center text-gray-300">
+           <i class="ph-fill ph-star text-4xl mb-2 opacity-30"></i>
+        </div>
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">MULLET CLASSIC</span>
+        </div>
+      </div>
+
+      <!-- Imagen 5: Ratio 1/1 (Square) -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'French Crop Clásico')">
+        <div class="w-full aspect-square bg-gradient-to-t from-gray-200 to-gray-100 flex flex-col items-center justify-center text-gray-300">
+           <i class="ph-fill ph-camera text-4xl mb-2 opacity-50"></i>
+        </div>
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">FRENCH CROP</span>
+        </div>
+      </div>
+
+      <!-- Imagen 6: Ratio 3/4 -->
+      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Low Fade Clásico')">
+        <div class="w-full aspect-[3/4] bg-gradient-to-b from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+           <i class="ph-fill ph-aperture text-4xl mb-2 opacity-40"></i>
+        </div>
+        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+           <span class="tracking-wide uppercase">LOW FADE</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Navigation Bar idéntica a la vista index.html (Lookbook Activo) -->
+  <div class="fixed bottom-6 left-0 right-0 px-6 max-w-md mx-auto z-30 opacity-0 animate-[fadeSlideUp_0.6s_cubic-bezier(0.16,1,0.3,1)_forwards] delay-200">
+    <nav class="glass-nav rounded-[2rem] px-6 py-4 flex justify-between items-center shadow-xl shadow-gray-200/40">
+      
+      <!-- Inicio (Inactivo) -->
+      <a href="index.html" class="flex flex-col items-center gap-1.5 text-gray-400 hover:text-brand-text transition-colors group">
+        <i class="ph ph-house text-2xl group-active:scale-95 transition-transform"></i>
+        <span class="text-[10px] font-semibold">Inicio</span>
+      </a>
+      
+      <!-- Reservar (Inactivo) -->
+      <a href="reservar.html" class="flex flex-col items-center gap-1.5 text-gray-400 hover:text-brand-text transition-colors group">
+        <i class="ph ph-calendar-plus text-2xl group-hover:scale-105 group-active:scale-95 transition-transform"></i>
+        <span class="text-[10px] font-semibold">Reservar</span>
+      </a>
+      
+      <!-- Lookbook (Activo) -->
+      <a href="#" class="flex flex-col items-center gap-1.5 text-brand-accent group">
+        <div class="relative">
+          <i class="ph-fill ph-images text-2xl group-active:scale-95 transition-transform"></i>
+          <!-- Indicador activo de sección -->
+          <span class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand-accent rounded-full"></span>
+        </div>
+        <span class="text-[10px] font-bold mt-0.5">Lookbook</span>
+      </a>
+      
+      <!-- Perfil (Inactivo) -->
+      <a href="gestion-interna.html" class="flex flex-col items-center gap-1.5 text-gray-400 hover:text-brand-text transition-colors group">
+        <i class="ph ph-user text-2xl group-hover:scale-105 group-active:scale-95 transition-transform"></i>
+        <span class="text-[10px] font-semibold">Admin</span>
+      </a>
+    </nav>
+  </div>
+
+
+  <!-- ================= BOTTOM SHEET COMPONENT ================= -->
+  
+  <!-- Backdrop Background -->
+  <div id="backdrop" class="fixed inset-0 bg-[#111827]/40 backdrop-blur-[2px] z-40 opacity-0 pointer-events-none transition-opacity duration-300 ease-out" onclick="closeStyleCard()"></div>
+  
+  <!-- Sheet Panel -->
+  <div id="bottomSheet" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[2.5rem] pt-3 px-6 pb-10 z-50 transform translate-y-full transition-transform duration-500 ease-spring shadow-[0_-15px_40px_rgba(0,0,0,0.12)]">
+    
+    <!-- Drag Handle / Indicador para deslizar -->
+    <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer" onclick="closeStyleCard()"></div>
+    
+    <!-- Info del Estilo Seleccionado -->
+    <div class="flex gap-5 mb-8 items-center">
+      
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-accent/10 to-brand-accent/5 border border-brand-accent/20 flex flex-col items-center justify-center shrink-0 shadow-inner">
+         <i class="ph-fill ph-sparkle text-3xl text-brand-accent"></i>
+      </div>
+      
+      <div>
+        <span class="text-[10px] font-bold text-brand-accent tracking-widest uppercase mb-1 block">Estilo Seleccionado</span>
+        <h3 id="sheetTitle" class="text-2xl font-bold text-brand-text mb-1 tracking-tight">Nombre del Estilo</h3>
+        <p class="text-[13px] text-gray-500 font-medium leading-relaxed">Considera este look si buscas algo de bajo mantenimiento pero con gran impacto visual y mucha limpieza.</p>
+      </div>
+
+    </div>
+    
+    <!-- Panel Actions -->
+    <div class="flex gap-4">
+        <!-- Botón Guardar favorito -->
+        <button onclick="toggleLike(this)" class="w-14 h-14 rounded-[1.25rem] border-2 border-gray-100 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-200 active:scale-95 transition-all outline-none shrink-0 group">
+          <i class="ph-fill ph-heart text-2xl group-hover:text-red-500 transition-colors pointer-events-none"></i>
+        </button>
+        
+        <!-- Botón Principal: Agendar este estilo -->
+        <a href="reservar.html" class="flex-1 bg-brand-text text-white text-[15px] font-bold py-4 rounded-full shadow-xl shadow-brand-text/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 outline-none hover:bg-black">
+          Agendar este estilo <i class="ph-bold ph-arrow-right text-xl text-white/70"></i>
+        </a>
+    </div>
+
+  </div>
+
+  <script>
+    let currentActiveCard = null;
+
+    // Abrir el Bottom Sheet
+    function openStyleCard(cardElement, styleName) {
+        // Limpiamos overlays previos por seguridad
+        document.querySelectorAll('.style-overlay').forEach(el => {
+            el.classList.remove('opacity-100');
+        });
+
+        currentActiveCard = cardElement;
+        
+        // Oscurecer la imagen clickeada específicamente
+        let overlay = cardElement.querySelector('.style-overlay');
+        overlay.classList.add('opacity-100'); // Aplica el oscurecimiento
+
+        // Actualizar datos de la interfaz del Sheet
+        document.getElementById('sheetTitle').innerText = styleName;
+
+        // Mostrar Backdrop con blur y oscurecimiento
+        document.getElementById('backdrop').classList.remove('opacity-0', 'pointer-events-none');
+        
+        // Subir el Bottom Sheet con transición "spring"
+        document.getElementById('bottomSheet').classList.remove('translate-y-full');
+    }
+
+    // Cerrar el Bottom Sheet
+    function closeStyleCard() {
+        // Ocultar Backdrop
+        document.getElementById('backdrop').classList.add('opacity-0', 'pointer-events-none');
+        
+        // Bajar el Bottom Sheet
+        document.getElementById('bottomSheet').classList.add('translate-y-full');
+
+        // Quitar oscurecimiento de la tarjeta en la galería
+        if(currentActiveCard) {
+            let overlay = currentActiveCard.querySelector('.style-overlay');
+            overlay.classList.remove('opacity-100');
+            currentActiveCard = null;
+        }
+    }
+
+    // Lógica para botón Favorito/Like (Opcional visual)
+    function toggleLike(btn) {
+       let heart = btn.querySelector('i');
+       if(heart.classList.contains('text-red-500')) {
+          heart.classList.remove('text-red-500');
+          btn.classList.remove('border-red-100', 'bg-red-50');
+       } else {
+          heart.classList.add('text-red-500');
+          btn.classList.add('border-red-100', 'bg-red-50');
+       }
+    }
+  </script>
+</body>
+</html>
