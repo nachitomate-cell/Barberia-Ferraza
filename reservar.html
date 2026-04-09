@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#FAFAFA">
-  <title>Agendar Hora | Barbería Premium</title>
+  <meta name="theme-color" content="#050505">
+  <title>Agendar Hora | Barbería Ferraza (Neon Mode)</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,10 +20,13 @@
         extend: {
           colors: {
             brand: {
-              bg: '#FAFAFA',
-              text: '#111827',
-              accent: '#10B981',
-              accentDark: '#047857'
+              bg: '#050505', 
+              text: '#f8fafc',
+              accent: '#ffffff', /* Neon White */
+              accentDark: '#e2e8f0', 
+              card: '#111115', 
+              border: '#1f2937', 
+              neon: '#ffffff'
             }
           },
           fontFamily: {
@@ -31,11 +34,16 @@
           },
           animation: {
             'fade-slide-up': 'fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'neon-pulse': 'neonPulse 3s infinite',
           },
           keyframes: {
             fadeSlideUp: {
               '0%': { opacity: '0', transform: 'translateY(24px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            neonPulse: {
+              '0%, 100%': { boxShadow: '0 0 5px rgba(255,255,255,0.1)' },
+              '50%': { boxShadow: '0 0 15px rgba(255,255,255,0.3)' },
             }
           }
         }
@@ -45,56 +53,84 @@
 
   <style>
     body {
-      background-color: #FAFAFA;
-      color: #111827;
+      background-color: #050505;
+      color: #f8fafc;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Utilidades Neón Personalizadas Blancas (Sutiles) */
+    .text-neon {
+      color: #ffffff;
+      text-shadow: 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,255,255,0.2);
+    }
+    .border-neon {
+      border-color: #ffffff;
+      box-shadow: 0 0 6px rgba(255,255,255,0.2), inset 0 0 6px rgba(255,255,255,0.2);
+    }
+    .bg-neon {
+      background-color: #ffffff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.4), 0 0 15px rgba(255,255,255,0.2);
+    }
   </style>
 </head>
 <body class="font-sans antialiased min-h-screen pb-32">
 
   <div class="max-w-md mx-auto relative overflow-hidden">
     
-    <header class="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 bg-[#FAFAFA]/90 backdrop-blur-md z-40">
-      <button onclick="goBack()" class="w-11 h-11 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm active:scale-95 transition-transform text-brand-text">
+    <header class="px-6 pt-8 pb-6 flex flex-col items-center justify-center sticky top-0 bg-[#050505]/95 backdrop-blur-md z-40 border-b border-brand-accent/10 block relative">
+      <button onclick="goBack()" class="absolute left-6 top-8 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0d] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.1)] active:scale-95 transition-transform text-brand-neon">
         <i class="ph-bold ph-arrow-left text-xl"></i>
       </button>
-      <div class="flex items-center gap-2">
-        <img src="logo.png" alt="Marcelo Hairdressing" class="h-10 w-10 rounded-full object-cover border border-gray-100 shadow-sm">
-        <h1 class="text-xl font-bold tracking-tight text-brand-text">Marcelo Hairdressing</h1>
-      </div>
-      <div class="w-11"></div>
+      <img src="logo.jpg" alt="Barbería Ferraza" class="w-24 h-24 max-w-xs mx-auto rounded-full object-cover border-2 border-brand-neon shadow-[0_0_20px_rgba(255,255,255,0.25)] mb-3 mt-1">
+      <h1 class="text-3xl font-bold tracking-tight text-neon">Barbería Ferraza</h1>
+      <p class="text-[11px] font-semibold text-brand-neon tracking-[0.3em] uppercase mt-1 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Ferraza es tu casa</p>
     </header>
 
-    <div class="px-6 mb-8 pt-1 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+    <div class="px-6 mt-6 mb-8 pt-1 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
       <div class="flex justify-between items-end mb-2.5">
-        <span id="stepIndicatorText" class="text-xs font-bold text-brand-accent uppercase tracking-widest">Paso 1 de 3: Servicios</span>
-        <span id="progressPercentage" class="text-xs font-bold text-gray-400">33%</span>
+        <span id="stepIndicatorText" class="text-xs font-bold text-neon uppercase tracking-widest">Paso 1 de 4: Servicios</span>
+        <span id="progressPercentage" class="text-xs font-bold text-brand-neon/60">25%</span>
       </div>
-      <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-        <div id="progressBar" class="bg-brand-accent h-1.5 rounded-full transition-all duration-700 w-1/3 relative"></div>
+      <div class="w-full bg-[#1a1a24] rounded-full h-1.5 overflow-hidden border border-brand-accent/10">
+        <div id="progressBar" class="bg-neon h-1.5 rounded-full transition-all duration-700 w-1/4 relative"></div>
       </div>
     </div>
 
-    <main class="px-6 pb-20 relative min-h-[500px]">
+    <main class="px-6 pb-6 relative min-h-[500px]">
 
       <!-- PASO 1 -->
       <section id="step1" class="animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-        <h2 class="text-2xl font-bold mb-6 text-brand-text tracking-tight">¿Qué servicio buscas?</h2>
+        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">¿Qué servicio buscas?</h2>
         <div class="grid grid-cols-2 gap-4" id="servicesGrid">
         </div>
       </section>
 
       <!-- PASO 2 -->
       <section id="step2" class="hidden opacity-0 transform translate-x-12">
-        <h2 class="text-2xl font-bold mb-6 text-brand-text tracking-tight">Selecciona fecha y hora</h2>
+        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona tu Barbero</h2>
+        <div class="flex flex-col gap-4">
+            <div class="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-neon bg-brand-neon/5 shadow-[0_0_20px_rgba(255,255,255,0.2)] text-center overflow-hidden">
+                <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
+                
+                <img src="Fabian.png" alt="Foto de Fabian Barraza" class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">
+                <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">Fabian Barraza</span>
+                <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
+                   <i class="ph-fill ph-check-circle text-[16px]"></i> Barbero Disponible
+                </span>
+            </div>
+        </div>
+      </section>
+
+      <!-- PASO 3 -->
+      <section id="step3" class="hidden opacity-0 transform translate-x-12">
+        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona fecha y hora</h2>
         
         <div class="mb-8">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-gray-800 text-lg" id="currentMonthText"></h3>
+            <h3 class="font-semibold text-brand-text text-lg" id="currentMonthText"></h3>
           </div>
           <div class="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 scroll-smooth" id="calendarCarousel">
              <!-- Días Dinámicos -->
@@ -102,63 +138,82 @@
         </div>
 
         <div>
-          <h3 class="font-semibold text-gray-800 text-lg mb-4">Horas Disponibles</h3>
+          <h3 class="font-semibold text-brand-text text-lg mb-4">Horas Disponibles</h3>
           <div class="flex flex-wrap gap-2.5" id="hoursGrid">
           </div>
         </div>
       </section>
 
-      <!-- PASO 3 -->
-      <section id="step3" class="hidden opacity-0 transform translate-x-12">
-        <h2 class="text-2xl font-bold text-brand-text tracking-tight mb-2">Último paso</h2>
-        <p class="text-[14px] text-gray-500 mb-8 leading-relaxed">Ingresa tus datos para confirmar la reserva a tu nombre.</p>
+      <!-- PASO 4 -->
+      <section id="step4" class="hidden opacity-0 transform translate-x-12">
+        <h2 class="text-2xl font-bold text-neon tracking-tight mb-2">Último paso</h2>
+        <p class="text-[14px] text-gray-400 mb-8 leading-relaxed">Ingresa tus datos para confirmar la reserva a tu nombre.</p>
         
         <div class="space-y-5">
             <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">Nombre completo</label>
-                <input type="text" id="clientName" placeholder="Ej. Ignacio Mateluna" class="w-full bg-white border border-gray-200 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all shadow-sm">
+                <label class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Nombre completo</label>
+                <input type="text" id="clientName" placeholder="Ej. Ignacio Mateluna" class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
             </div>
             <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">Teléfono móvil</label>
-                <input type="tel" id="clientPhone" value="+569 " inputmode="numeric" class="w-full bg-white border border-gray-200 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all shadow-sm">
+                <label class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Teléfono móvil</label>
+                <input type="tel" id="clientPhone" value="+569 " inputmode="numeric" class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
             </div>
             <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">Correo electrónico <span class="text-sm font-normal text-gray-400">(opcional)</span></label>
-                <input type="email" id="clientEmail" placeholder="ejemplo@correo.com" inputmode="email" class="w-full bg-white border border-gray-200 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all shadow-sm">
+                <label class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Correo electrónico <span class="text-sm font-normal text-gray-500">(opcional)</span></label>
+                <input type="email" id="clientEmail" placeholder="ejemplo@correo.com" inputmode="email" class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
             </div>
         </div>
 
-        <div class="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-5 shadow-inner">
-            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Resumen de Cita</h4>
-            <div class="flex justify-between items-center mb-1">
+        <div class="mt-8 bg-brand-card border border-neon rounded-2xl p-5 shadow-[0_0_15px_rgba(255,255,255,0.08)] relative overflow-hidden">
+            <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
+            <h4 class="text-[10px] font-bold text-neon uppercase tracking-widest mb-3 relative">Resumen de Cita</h4>
+            <div class="flex justify-between items-center mb-1 relative">
                 <span class="font-bold text-brand-text" id="summaryService"></span>
-                <span class="font-bold text-brand-accent" id="summaryPrice"></span>
+                <span class="font-bold text-neon" id="summaryPrice"></span>
             </div>
-            <div class="flex items-center gap-1.5 text-sm text-gray-500 font-medium mt-2">
-                <i class="ph-fill ph-calendar-blank text-gray-400"></i> <span id="summaryDateString"></span>, <span id="summaryTime" class="text-brand-text font-bold"></span>
+            <div class="flex items-center gap-1.5 text-sm text-gray-400 font-medium mt-2 relative">
+                <i class="ph-fill ph-user text-brand-neon/70"></i> <span id="summaryBarber">Fabian Barraza</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-sm text-gray-400 font-medium mt-1 relative">
+                <i class="ph-fill ph-calendar-blank text-brand-neon/70"></i> <span id="summaryDateString"></span>, <span id="summaryTime" class="text-neon font-bold"></span>
             </div>
         </div>
       </section>
 
       <!-- Pantalla de Éxito -->
       <section id="success-state" class="hidden flex-col items-center justify-center text-center pt-10 pb-20 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-          <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
-             <i class="ph-fill ph-check-circle text-5xl text-brand-accent"></i>
+          <div class="w-24 h-24 bg-[#0a0a0d] border border-neon rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(255,255,255,0.2)] relative">
+             <div class="absolute inset-0 rounded-full bg-brand-neon/10 animate-ping opacity-75"></div>
+             <i class="ph-fill ph-check-circle text-6xl text-neon relative z-10"></i>
           </div>
-          <h2 class="text-3xl font-bold text-brand-text tracking-tight mb-2">¡Reserva Confirmada!</h2>
-          <p class="text-gray-500 font-medium mb-10">Tu hora ha sido agendada con éxito.</p>
-          <a id="waBtnLink" href="#" target="_blank" class="w-full bg-[#25D366] text-white text-lg font-bold py-4 rounded-[2rem] shadow-xl shadow-[#25D366]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-4">
-            ¡Avísale a tu barbero! <i class="ph-bold ph-whatsapp-logo text-2xl"></i>
+          <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
+          <p class="text-brand-neon/80 font-medium mb-10 text-lg">Tu hora ha sido agendada con éxito.</p>
+          <a id="waBtnLink" href="#" target="_blank" class="w-full bg-transparent border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-6 hover:bg-[#25D366]/10">
+            ¡Avísale a tu barbero! <i class="ph-bold ph-whatsapp-logo text-2xl drop-shadow-[0_0_5px_rgba(37,211,102,0.8)]"></i>
           </a>
-          <button onclick="window.location.reload()" class="font-bold text-gray-400 hover:text-gray-600 transition-colors">Volver al inicio</button>
+          <button onclick="window.location.reload()" class="font-bold text-brand-neon/60 hover:text-neon transition-all hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Volver al inicio</button>
       </section>
+
+      <!-- Footer Contact Info -->
+      <div id="footerContact" class="mt-14 pt-8 pb-4 text-center border-t border-brand-accent/10 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+        <div class="flex flex-col items-center justify-center gap-3">
+          <p class="text-sm text-gray-400 font-medium flex items-center gap-2 hover:text-brand-text transition-colors">
+            <i class="ph-fill ph-map-pin text-neon text-lg"></i>
+            Av. Libertad 63 / Local 28
+          </p>
+          <p class="text-sm text-gray-400 font-medium flex items-center gap-2 hover:text-brand-text transition-colors">
+            <i class="ph-fill ph-clock text-neon text-lg"></i>
+            Atendemos Lun a Sab 10:00 - 20:00 hrs.
+          </p>
+        </div>
+      </div>
 
     </main>
   </div>
 
-  <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-brand-bg via-brand-bg/95 to-transparent z-40">
+  <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent z-40">
     <div class="max-w-md mx-auto">
-      <button id="btnContinue" onclick="nextStep()" class="w-full bg-brand-text text-white text-lg font-bold py-4 rounded-[2rem] shadow-xl shadow-brand-text/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 focus:outline-none">
+      <button id="btnContinue" onclick="nextStep()" class="w-full bg-[#0a0a0d] border-2 border-neon text-neon text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 focus:outline-none hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:bg-brand-neon/5">
         Continuar <i class="ph-bold ph-arrow-right text-xl"></i>
       </button>
     </div>
@@ -192,13 +247,15 @@
         services.forEach(s => {
             const icon = icons[s.id] || 'ph-scissors';
             grid.innerHTML += `
-            <button onclick="selectService(this)" data-service-id="${s.id}" class="service-option flex flex-col items-center justify-center p-6 rounded-2xl bg-white border-2 border-gray-100 shadow-sm hover:border-gray-200 active:scale-95 text-center transition-all">
-                <div class="icon-bg w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4 transition-colors">
-                  <i class="icon-svg ph ${icon} text-3xl text-gray-600 transition-colors"></i>
+            <button onclick="selectService(this)" data-service-id="${s.id}" class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
+                <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
+                
+                <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
+                  <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
                 </div>
-                <span class="font-semibold text-brand-text text-sm mb-1">${s.nombre}</span>
-                <span class="text-xs font-medium text-gray-500 price-tag transition-colors mb-1">$${s.precio.toLocaleString('es-CL')}</span>
-                <span class="flex items-center gap-1 text-[11px] font-medium text-gray-400 duration-tag transition-colors">
+                <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
+                <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
+                <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
                   <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
                 </span>
             </button>`;
@@ -230,15 +287,15 @@
            let disabled = !settings.diasLaborales.includes(dw);
            
            if(disabled) {
-              carousel.innerHTML += `<button class="day-btn flex-shrink-0 w-16 h-[5.5rem] rounded-2xl bg-gray-50 border border-transparent flex flex-col items-center justify-center text-center opacity-40 pointer-events-none">
-                <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">${daysOfWeek[dw]}</span>
-                <span class="text-2xl font-bold text-gray-400 day-num">${d.getDate()}</span>
+              carousel.innerHTML += `<button class="day-btn flex-shrink-0 w-16 h-[5.5rem] rounded-2xl bg-[#0a0a0d] border border-gray-800 flex flex-col items-center justify-center text-center opacity-30 pointer-events-none">
+                <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">${daysOfWeek[dw]}</span>
+                <span class="text-2xl font-bold text-gray-600 day-num">${d.getDate()}</span>
               </button>`;
            } else {
-              let activeClass = !firstSelectableSet ? 'active bg-brand-text text-white shadow-lg shadow-gray-400/30' : 'bg-white border-gray-100 shadow-sm text-brand-text';
-              let textSpan1 = !firstSelectableSet ? 'text-white opacity-70' : 'text-gray-500';
-              let textSpan2 = !firstSelectableSet ? 'text-white' : 'text-brand-text';
-              let dotClass = !firstSelectableSet ? 'bg-brand-accent shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-transparent';
+              let activeClass = !firstSelectableSet ? 'active bg-brand-neon/10 border-neon shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-[#0a0a0d] border-brand-accent/20 hover:border-brand-neon/50 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)]';
+              let textSpan1 = !firstSelectableSet ? 'text-neon' : 'text-gray-400';
+              let textSpan2 = !firstSelectableSet ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]' : 'text-gray-300';
+              let dotClass = !firstSelectableSet ? 'bg-neon shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-transparent';
               
               if(!firstSelectableSet) {
                   currentDateStr = dateStr;
@@ -246,9 +303,9 @@
               }
 
               carousel.innerHTML += `<button onclick="handleDayClick(this, '${dateStr}')" class="day-btn ${activeClass} flex-shrink-0 w-16 h-[5.5rem] rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 cursor-pointer border">
-                <span class="text-[11px] font-semibold uppercase tracking-wide mb-1 ${textSpan1}">${daysOfWeek[dw]}</span>
-                <span class="text-2xl font-bold ${textSpan2} day-num">${d.getDate()}</span>
-                <div class="dot h-1.5 w-1.5 rounded-full mt-1.5 ${dotClass}"></div>
+                <span class="text-[11px] font-semibold uppercase tracking-wide mb-1 ${textSpan1} transition-all">${daysOfWeek[dw]}</span>
+                <span class="text-2xl font-bold ${textSpan2} day-num transition-all">${d.getDate()}</span>
+                <div class="dot h-1.5 w-1.5 rounded-full mt-1.5 ${dotClass} transition-all"></div>
               </button>`;
            }
         }
@@ -256,22 +313,22 @@
 
     function handleDayClick(btn, dateStr) {
         document.querySelectorAll('.day-btn:not(.pointer-events-none)').forEach(b => {
-             b.classList.remove('active', 'bg-brand-text', 'text-white', 'shadow-lg', 'shadow-gray-400/30');
-             b.classList.add('bg-white', 'border-gray-100', 'shadow-sm', 'text-brand-text');
+             b.classList.remove('active', 'bg-brand-neon/10', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.2)]');
+             b.classList.add('bg-[#0a0a0d]', 'border-brand-accent/20');
              
              let spans = b.querySelectorAll('span');
-             spans[0].className = "text-[11px] font-semibold uppercase tracking-wide mb-1 text-gray-500";
-             spans[1].className = "text-2xl font-bold text-brand-text day-num";
-             b.querySelector('.dot').className = 'dot h-1.5 w-1.5 rounded-full mt-1.5 bg-transparent';
+             spans[0].className = "text-[11px] font-semibold uppercase tracking-wide mb-1 text-gray-400 transition-all";
+             spans[1].className = "text-2xl font-bold text-gray-300 day-num transition-all";
+             b.querySelector('.dot').className = 'dot h-1.5 w-1.5 rounded-full mt-1.5 bg-transparent transition-all';
         });
         
-        btn.classList.add('active', 'bg-brand-text', 'text-white', 'shadow-lg', 'shadow-gray-400/30');
-        btn.classList.remove('bg-white', 'border-gray-100', 'shadow-sm', 'text-brand-text');
+        btn.classList.add('active', 'bg-brand-neon/10', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.2)]');
+        btn.classList.remove('bg-[#0a0a0d]', 'border-brand-accent/20');
         
         let spans = btn.querySelectorAll('span');
-        spans[0].className = "text-[11px] font-semibold uppercase tracking-wide mb-1 text-white opacity-70";
-        spans[1].className = "text-2xl font-bold text-white day-num";
-        btn.querySelector('.dot').className = 'dot h-1.5 w-1.5 rounded-full mt-1.5 bg-brand-accent shadow-[0_0_8px_rgba(16,185,129,0.8)]';
+        spans[0].className = "text-[11px] font-semibold uppercase tracking-wide mb-1 text-neon transition-all";
+        spans[1].className = "text-2xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.4)] day-num transition-all";
+        btn.querySelector('.dot').className = 'dot h-1.5 w-1.5 rounded-full mt-1.5 bg-neon shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all';
 
         currentDateStr = dateStr;
         selectedTimeStr = null; 
@@ -286,15 +343,15 @@
         grid.innerHTML = '';
         
         if(hours.length === 0) {
-            grid.innerHTML = `<p class="text-sm text-gray-500">No hay horas disponibles este día.</p>`;
+            grid.innerHTML = `<p class="text-sm text-brand-neon/60">No hay horas disponibles este día.</p>`;
             return;
         }
 
         hours.forEach(h => {
              if (h.occupied) {
-                 grid.innerHTML += `<button class="px-6 py-2.5 rounded-full border border-transparent bg-gray-100 text-[15px] font-medium text-gray-400 line-through pointer-events-none opacity-60">${h.time}</button>`;
+                 grid.innerHTML += `<button class="px-6 py-3 rounded-[1rem] border border-gray-800 bg-[#0a0a0d] text-[15px] font-medium text-gray-600 line-through pointer-events-none opacity-40 shadow-inner">${h.time}</button>`;
              } else {
-                 grid.innerHTML += `<button onclick="selectTime(this, '${h.time}')" class="time-pill px-6 py-2.5 rounded-full border border-gray-200 bg-white shadow-sm text-[15px] font-semibold text-gray-700 transition-all active:scale-95 hover:border-gray-300 focus:outline-none">${h.time}</button>`;
+                 grid.innerHTML += `<button onclick="selectTime(this, '${h.time}')" class="time-pill px-6 py-3 rounded-[1rem] border border-brand-accent/20 bg-[#0a0a0d] shadow-[0_0_5px_rgba(0,0,0,0.5)] text-[15px] font-bold text-gray-300 transition-all active:scale-95 hover:border-neon hover:shadow-[0_0_10px_rgba(255,255,255,0.15)] hover:text-neon focus:outline-none">${h.time}</button>`;
              }
         });
     }
@@ -304,32 +361,38 @@
         const id = parseInt(rawId) || rawId;
 
         document.querySelectorAll('.service-option').forEach(el => {
-            el.classList.replace('border-brand-accent', 'border-gray-100');
-            el.classList.remove('bg-emerald-50', 'scale-105', 'shadow-md');
-            el.querySelector('.icon-bg').classList.replace('bg-white', 'bg-gray-50');
-            el.querySelector('.icon-svg').classList.replace('text-brand-accent', 'text-gray-600');
-            el.querySelector('.price-tag').classList.replace('text-brand-accent', 'text-gray-500');
-            el.querySelector('.duration-tag').classList.replace('text-brand-accent/70', 'text-gray-400');
+            el.classList.replace('border-neon', 'border-brand-accent/20');
+            el.classList.remove('bg-brand-neon/10', 'scale-105', 'shadow-[0_0_20px_rgba(255,255,255,0.2)]', 'border-2');
+            el.classList.add('border');
+            
+            el.querySelector('.icon-bg').classList.replace('border-brand-neon', 'border-brand-accent/20');
+            el.querySelector('.icon-bg').classList.replace('shadow-[0_0_15px_rgba(255,255,255,0.3)]', 'shadow-[0_0_10px_rgba(255,255,255,0.05)]');
+            
+            el.querySelector('.icon-svg').classList.remove('drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]', 'scale-110');
+            el.querySelector('.icon-svg').classList.add('drop-shadow-[0_0_5px_rgba(255,255,255,0.35)]');
         });
         
-        btn.classList.replace('border-gray-100', 'border-brand-accent');
-        btn.classList.add('bg-emerald-50', 'scale-105', 'shadow-md');
-        btn.querySelector('.icon-bg').classList.replace('bg-gray-50', 'bg-white');
-        btn.querySelector('.icon-svg').classList.replace('text-gray-600', 'text-brand-accent');
-        btn.querySelector('.price-tag').classList.replace('text-gray-500', 'text-brand-accent');
-        btn.querySelector('.duration-tag').classList.replace('text-gray-400', 'text-brand-accent/70');
+        btn.classList.add('border-2', 'border-neon', 'bg-brand-neon/10', 'scale-105', 'shadow-[0_0_20px_rgba(255,255,255,0.2)]');
+        btn.classList.replace('border-brand-accent/20', 'border-neon');
+        btn.classList.remove('border');
+        
+        btn.querySelector('.icon-bg').classList.replace('border-brand-accent/20', 'border-brand-neon');
+        btn.querySelector('.icon-bg').classList.replace('shadow-[0_0_10px_rgba(255,255,255,0.05)]', 'shadow-[0_0_15px_rgba(255,255,255,0.3)]');
+        
+        btn.querySelector('.icon-svg').classList.remove('drop-shadow-[0_0_5px_rgba(255,255,255,0.35)]');
+        btn.querySelector('.icon-svg').classList.add('drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]', 'scale-110');
         
         selectedServiceObj = DB.getServices().find(s => String(s.id) === String(id));
     }
 
     function selectTime(btn, time) {
         document.querySelectorAll('.time-pill').forEach(el => {
-            el.classList.remove('bg-brand-accent', 'text-white', 'border-transparent', 'shadow-md');
-            el.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+            el.classList.remove('bg-brand-neon/10', 'text-neon', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.25)]', 'border-2');
+            el.classList.add('bg-[#0a0a0d]', 'text-gray-300', 'border-brand-accent/20', 'border');
         });
         
-        btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-        btn.classList.add('bg-brand-accent', 'text-white', 'border-transparent', 'shadow-md');
+        btn.classList.remove('bg-[#0a0a0d]', 'text-gray-300', 'border-brand-accent/20', 'border');
+        btn.classList.add('bg-brand-neon/10', 'text-neon', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.25)]', 'border-2');
         selectedTimeStr = time;
     }
 
@@ -349,9 +412,10 @@
                updateProgress();
                
                let btn = document.getElementById('btnContinue');
-               if(currentStep === 1 || currentStep === 2) {
+               if(currentStep === 1 || currentStep === 2 || currentStep === 3) {
                    btn.innerHTML = 'Continuar <i class="ph-bold ph-arrow-right text-xl"></i>';
-                   btn.classList.replace('bg-brand-accent', 'bg-brand-text');
+                   btn.classList.add('bg-[#0a0a0d]');
+                   btn.classList.remove('bg-brand-neon/10');
                }
            }, 300);
         }
@@ -359,8 +423,8 @@
 
     function updateProgress() {
         const bar = document.getElementById('progressBar');
-        const percentage = currentStep === 1 ? '33%' : (currentStep === 2 ? '66%' : '100%');
-        const textStates = ["Paso 1 de 3: Servicios", "Paso 2 de 3: Fecha y Hora", "Paso 3 de 3: Confirmación"];
+        const percentage = currentStep === 1 ? '25%' : (currentStep === 2 ? '50%' : (currentStep === 3 ? '75%' : '100%'));
+        const textStates = ["Paso 1 de 4: Servicios", "Paso 2 de 4: Barbero", "Paso 3 de 4: Fecha y Hora", "Paso 4 de 4: Confirmación"];
         
         bar.style.width = percentage;
         document.getElementById('progressPercentage').innerText = percentage;
@@ -372,14 +436,19 @@
         if (currentStep === 1) {
             if (!selectedServiceObj) return alert("Selecciona un servicio.");
             
-            renderCalendar();
-            renderHours();
-            
             transitionStep(1, 2);
             currentStep = 2;
             updateProgress();
             
         } else if (currentStep === 2) {
+            renderCalendar();
+            renderHours();
+            
+            transitionStep(2, 3);
+            currentStep = 3;
+            updateProgress();
+            
+        } else if (currentStep === 3) {
             if (!selectedTimeStr) return alert("Selecciona una hora disponible.");
             
             document.getElementById('summaryService').innerText = selectedServiceObj.nombre;
@@ -387,15 +456,16 @@
             document.getElementById('summaryDateString').innerText = currentDateStr;
             document.getElementById('summaryTime').innerText = selectedTimeStr;
             
-            transitionStep(2, 3);
-            currentStep = 3;
+            transitionStep(3, 4);
+            currentStep = 4;
             updateProgress();
             
             let btn = document.getElementById('btnContinue');
-            btn.innerHTML = 'Reservar ahora <i class="ph-bold ph-check-circle text-xl"></i>';
-            btn.classList.replace('bg-brand-text', 'bg-brand-accent');
+            btn.innerHTML = 'Reservar ahora <i class="ph-bold ph-check-circle text-xl drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]"></i>';
+            btn.classList.remove('bg-[#0a0a0d]');
+            btn.classList.add('bg-brand-neon/10');
             
-        } else if (currentStep === 3) {
+        } else if (currentStep === 4) {
             const nombre = document.getElementById('clientName').value;
             const tel = document.getElementById('clientPhone').value;
             
@@ -410,13 +480,13 @@
                 clienteTelefono: tel,
                 clienteEmail: email,
                 servicioNombre: selectedServiceObj.nombre,
-                duracionServicio: selectedServiceObj.duracion
+                duracionServicio: selectedServiceObj.duracion,
+                barbero: "Fabian Barraza"
             });
             
-            // Ocultar formulario y mostrar éxito
-            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step4').classList.add('hidden');
+            document.getElementById('footerContact').classList.add('hidden');
             
-            // Ocultar el footer del botón continuar (para que no estorben dos botones)
             document.getElementById('btnContinue').parentElement.parentElement.classList.add('hidden');
             document.getElementById('progressBar').parentElement.parentElement.classList.add('opacity-0');
             
@@ -424,8 +494,7 @@
             successEl.classList.remove('hidden');
             successEl.classList.add('flex');
             
-            // Generar enlace WA
-            const waMsg = `Hola Marcelo! Acabo de agendar una hora. 💈 \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
+            const waMsg = `Hola Ferraza! Acabo de agendar una hora. 💈 \n- Barbero: Fabian Barraza \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
             const numBarbero = DB.getSettings().telefonoAdmin || "56900000000"; 
             document.getElementById('waBtnLink').href = `https://wa.me/${numBarbero}?text=${encodeURIComponent(waMsg)}`;
         }
