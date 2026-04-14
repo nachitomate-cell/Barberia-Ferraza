@@ -1589,14 +1589,15 @@ async function canjearPremio() {
   if (!confirm(`¿Canjear "${selectedPremio.nombre}" por ${selectedPremio.sellos} sellos?`)) return;
 
   try {
-    await _canjearStamps(currentClientUid, selectedPremio.sellos, selectedPremio.nombre);
+    const nombrePremio = selectedPremio.nombre;
+    await _canjearStamps(currentClientUid, selectedPremio.sellos, nombrePremio);
     // onSnapshot actualiza el panel y la lista automáticamente
 
-    document.getElementById('canjeMsg').textContent = `✓ ${selectedPremio.nombre} canjeado.`;
+    document.getElementById('canjeMsg').textContent = `✓ ${nombrePremio} canjeado.`;
     document.getElementById('canjeMsg').className   = 'text-xs text-center mt-2 text-admin-accent';
     document.getElementById('canjeMsg').classList.remove('hidden');
     selectedPremio = null;
-    showMiniToast(`Premio canjeado: ${selectedPremio?.nombre || '✓'}`);
+    showMiniToast(`Premio canjeado: ${nombrePremio}`);
   } catch(e) {
     document.getElementById('canjeMsg').textContent = e.message;
     document.getElementById('canjeMsg').className   = 'text-xs text-center mt-2 text-red-400';
