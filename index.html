@@ -504,7 +504,7 @@
       document.getElementById('stepIndicatorText').innerText = textStates[currentStep - 1];
     }
 
-    function nextStep() {
+    async function nextStep() {
       if (isTransitioning) return;
       if (currentStep === 1) {
         if (!selectedServiceObj) return alert("Selecciona un servicio.");
