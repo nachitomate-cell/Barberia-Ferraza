@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title>Agendar Hora | Barbería Ferraza (Neon Mode)</title>
+  <title id="pageTitle">Agendar Hora</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <script src="config.js"></script>
   <script src="db.js"></script>
 
   <script>
@@ -97,12 +98,12 @@
         class="absolute left-6 top-8 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0d] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.1)] active:scale-95 transition-transform text-brand-neon">
         <i class="ph-bold ph-arrow-left text-xl"></i>
       </button>
-      <img src="logo.jpg" alt="Barbería Ferraza"
+      <img id="shopLogo" src="" alt=""
         class="w-24 h-24 max-w-xs mx-auto rounded-full object-cover border-2 border-brand-neon shadow-[0_0_20px_rgba(255,255,255,0.25)] mb-3 mt-1">
-      <h1 class="text-3xl font-bold tracking-tight text-neon">Barbería Ferraza</h1>
+      <h1 id="shopNombre" class="text-3xl font-bold tracking-tight text-neon"></h1>
       <p
         class="text-[11px] font-semibold text-brand-neon tracking-[0.3em] uppercase mt-1 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">
-        Ferraza es tu casa</p>
+        <span id="shopSlogan"></span></p>
     </header>
 
     <div class="px-6 mt-6 mb-8 pt-1 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
@@ -128,19 +129,7 @@
       <!-- PASO 2 -->
       <section id="step2" class="hidden opacity-0 transform translate-x-12">
         <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona tu Barbero</h2>
-        <div class="flex flex-col gap-4">
-          <div
-            class="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-neon bg-brand-neon/5 shadow-[0_0_20px_rgba(255,255,255,0.2)] text-center overflow-hidden">
-            <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
-
-            <img src="Fabian.png" alt="Foto de Fabian Barraza"
-              class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">
-            <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">Fabian Barraza</span>
-            <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
-              <i class="ph-fill ph-check-circle text-[16px]"></i> Barbero Disponible
-            </span>
-          </div>
-        </div>
+        <div id="barberosGrid" class="flex flex-col gap-4"></div>
       </section>
 
       <!-- PASO 3 -->
@@ -241,7 +230,7 @@
             <i class="ph-fill ph-medal text-xl text-neon drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Club Ferraza</p>
+            <p id="shopClubNombre" class="text-[10px] font-bold text-white/40 uppercase tracking-widest"></p>
             <p class="text-sm font-bold text-neon truncate">Únete y gana cortes gratis</p>
             <p class="text-xs text-gray-500 mt-0.5">Acumula sellos en cada visita</p>
           </div>
@@ -255,11 +244,11 @@
         <div class="flex flex-col items-center justify-center gap-3">
           <p class="text-sm text-gray-400 font-medium flex items-center gap-2 hover:text-brand-text transition-colors">
             <i class="ph-fill ph-map-pin text-neon text-lg"></i>
-            Av. Libertad 63 / Local 28
+            <span id="shopDireccion"></span>
           </p>
           <p class="text-sm text-gray-400 font-medium flex items-center gap-2 hover:text-brand-text transition-colors">
             <i class="ph-fill ph-clock text-neon text-lg"></i>
-            Atendemos Lun a Sab 10:00 - 20:00 hrs.
+            <span id="shopHorario"></span>
           </p>
         </div>
       </div>
@@ -538,7 +527,7 @@
           clienteEmail: email,
           servicioNombre: selectedServiceObj.nombre,
           duracionServicio: selectedServiceObj.duracion,
-          barbero: "Fabian Barraza"
+          barbero: window._selectedBarber || SHOP.barberos[0]?.nombre || ""
         });
 
         document.getElementById('step4').classList.add('hidden');
@@ -551,7 +540,7 @@
         successEl.classList.remove('hidden');
         successEl.classList.add('flex');
 
-        const waMsg = `Hola Ferraza! Acabo de agendar una hora. 💈 \n- Barbero: Fabian Barraza \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
+        const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar una hora. 💈 \n- Barbero: ${window._selectedBarber || SHOP.barberos[0]?.nombre || ''} \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
         const numBarbero = DB.getSettings().telefonoAdmin || "56900000000";
         document.getElementById('waBtnLink').href = `https://wa.me/${numBarbero}?text=${encodeURIComponent(waMsg)}`;
       }
@@ -587,7 +576,40 @@
       }, 300);
     }
 
-    window.addEventListener('DOMContentLoaded', initServices);
+    function applyConfig() {
+      document.title = `Agendar Hora | ${SHOP.nombre}`;
+      document.getElementById('shopLogo').src = SHOP.logo;
+      document.getElementById('shopLogo').alt = SHOP.nombre;
+      document.getElementById('shopNombre').textContent = SHOP.nombre;
+      document.getElementById('shopSlogan').textContent = SHOP.slogan;
+      document.getElementById('shopClubNombre').textContent = SHOP.club;
+      document.getElementById('shopDireccion').textContent = SHOP.direccion;
+      document.getElementById('shopHorario').textContent = SHOP.horario;
+
+      // Renderizar barberos
+      const grid = document.getElementById('barberosGrid');
+      grid.innerHTML = SHOP.barberos.map(b => `
+        <div class="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-neon bg-brand-neon/5 shadow-[0_0_20px_rgba(255,255,255,0.2)] text-center overflow-hidden">
+          <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
+          <img src="${b.foto}" alt="Foto de ${b.nombre}"
+            class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">
+          <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">${b.nombre}</span>
+          <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
+            <i class="ph-fill ph-check-circle text-[16px]"></i>
+            ${b.disponible ? 'Barbero Disponible' : 'No Disponible'}
+          </span>
+        </div>
+      `).join('');
+
+      // Seleccionar barbero automáticamente si hay uno solo disponible
+      const disponible = SHOP.barberos.find(b => b.disponible);
+      if (disponible) {
+        document.getElementById('summaryBarber').textContent = disponible.nombre;
+        window._selectedBarber = disponible.nombre;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => { applyConfig(); initServices(); });
 
   </script>
 </body>

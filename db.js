@@ -4,7 +4,7 @@ const defaultSettings = {
     horarioFin: "20:00",
     intervaloMinutos: 30,
     diasLaborales: [1, 2, 3, 4, 5, 6], // Lun a Sab
-    telefonoAdmin: "56900000000" // WhatsApp Receptor
+    telefonoAdmin: (typeof SHOP !== 'undefined' ? SHOP.telefono : "56900000000")
 };
 
 const defaultServices = [

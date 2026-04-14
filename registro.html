@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title>Únete al Club | Barbería Ferraza</title>
+  <title>Únete al Club</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
   <script src="firebase-config.js"></script>
 
   <script>
@@ -57,11 +58,11 @@
 
     <!-- Logo & Hero -->
     <div class="flex flex-col items-center mb-10">
-      <img src="logo.jpg" alt="Barbería Ferraza"
+      <img id="shopLogo" src="" alt=""
         class="w-20 h-20 rounded-full object-cover border-2 border-white shadow-[0_0_25px_rgba(255,255,255,0.3)] mb-5">
-      <h1 class="text-3xl font-bold tracking-tight text-neon text-center">Únete al Club</h1>
+      <h1 id="shopClub" class="text-3xl font-bold tracking-tight text-neon text-center">Únete al Club</h1>
       <p class="text-sm text-gray-400 mt-2 text-center leading-relaxed">
-        Acumula sellos y gana cortes gratis.<br>Solo en Barbería Ferraza.
+        Acumula sellos y gana cortes gratis.<br>Solo en <span id="shopNombre"></span>.
       </p>
     </div>
 
@@ -297,6 +298,14 @@
     if (e.key !== 'Enter') return;
     if (!document.getElementById('panelLogin').classList.contains('hidden')) loginWithEmail();
     else registerWithEmail();
+  });
+
+  // ── Config ───────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    document.title = `Únete al Club | ${SHOP.nombre}`;
+    document.getElementById('shopLogo').src = SHOP.logo;
+    document.getElementById('shopLogo').alt = SHOP.nombre;
+    document.getElementById('shopNombre').textContent = SHOP.nombre;
   });
 </script>
 </body>

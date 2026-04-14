@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title>Mi Club | Barbería Ferraza</title>
+  <title>Mi Club</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
   <script src="firebase-config.js"></script>
 
   <script>
@@ -88,9 +89,9 @@
 
     <!-- HEADER -->
     <header class="px-6 pt-8 pb-5 flex items-center justify-between sticky top-0 bg-[#050505]/95 backdrop-blur-md z-30 border-b border-white/5">
-      <img src="logo.jpg" alt="Ferraza" class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
+      <img id="shopLogo" src="" alt="" class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
       <div class="text-center">
-        <h1 class="text-base font-bold text-neon tracking-tight leading-none">Mi Club Ferraza</h1>
+        <h1 id="shopClubTitle" class="text-base font-bold text-neon tracking-tight leading-none"></h1>
         <p id="headerGreeting" class="text-[11px] text-gray-500 mt-0.5">Cargando...</p>
       </div>
       <div id="avatarContainer" class="w-9 h-9 rounded-full bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
@@ -109,7 +110,7 @@
         <div class="flex items-start justify-between mb-5">
           <div>
             <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tarjeta de Fidelización</p>
-            <h2 class="text-xl font-bold text-neon">Barbería Ferraza</h2>
+            <h2 id="shopNombreCard" class="text-xl font-bold text-neon"></h2>
           </div>
           <div class="flex flex-col items-end">
             <span class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Sellos</span>
@@ -358,6 +359,13 @@ const LOOKBOOK_PHOTOS = [
 let currentUser   = null;
 let userStamps    = 0;
 let activeTab     = 'loyalty';
+
+// ─── Aplicar Config ───────────────────────────────────────────
+document.title = `Mi Club | ${SHOP.nombre}`;
+document.getElementById('shopLogo').src         = SHOP.logo;
+document.getElementById('shopLogo').alt         = SHOP.nombreCorto;
+document.getElementById('shopClubTitle').textContent  = `Mi ${SHOP.club}`;
+document.getElementById('shopNombreCard').textContent = SHOP.nombre;
 
 // ─── Auth Guard ───────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
