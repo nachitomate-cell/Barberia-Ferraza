@@ -284,7 +284,7 @@
 
   <!-- ═══════ STICKY CTA: AGENDAR HORA ═══════ -->
   <div class="fixed bottom-[4.5rem] left-0 right-0 z-40 flex justify-center pointer-events-none px-5">
-    <a href="reservar.html"
+    <a href="index.html"
       class="pointer-events-auto flex items-center gap-2 bg-white text-[#050505] font-bold px-7 py-3.5 rounded-[2rem] shadow-[0_0_30px_rgba(255,255,255,0.35),0_4px_20px_rgba(0,0,0,0.6)] active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] text-base">
       <i class="ph-bold ph-calendar-plus text-lg"></i>
       Agendar Hora
@@ -537,7 +537,7 @@ async function deleteAccount() {
     await db.collection('users').doc(currentUser.uid).delete();
     // Borrar cuenta de Auth
     await currentUser.delete();
-    window.location.href = 'reservar.html';
+    window.location.href = 'index.html';
   } catch (err) {
     // Firebase requiere re-autenticación reciente para deleteUser
     if (err.code === 'auth/requires-recent-login') {
