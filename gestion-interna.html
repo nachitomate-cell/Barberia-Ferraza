@@ -743,6 +743,7 @@ let _serviciosCache   = [];   // servicios en tiempo real
 let _configCache      = null; // configuración en tiempo real
 let _citasDiaCache    = [];   // citas del día actual en tiempo real
 let _citasUnsub       = null; // cleanup del onSnapshot de citas
+let _panelUnsub       = null; // cleanup del onSnapshot del cliente abierto
 
 // Clientes (Tab 4)
 let allClients        = [];   // Cache de Firestore
@@ -1410,26 +1411,38 @@ function limpiarBusqueda() {
 }
 
 /* ── SIDE PANEL ─────────────────────────────────────────────── */
-async function abrirPanel(uid) {
+function abrirPanel(uid) {
   currentClientUid = uid;
 
-  // Siempre leer datos frescos de Firestore
-  const snap = await db.collection('users').doc(uid).get();
-  if (!snap.exists) return;
-  const data = snap.data();
+  // Cancelar suscripción anterior si había otra abierta
+  if (_panelUnsub) { _panelUnsub(); _panelUnsub = null; }
 
-  // Actualizar cache local
-  const idx = allClients.findIndex(c => c.uid === uid);
-  if (idx !== -1) allClients[idx] = { uid, ...data };
+  // onSnapshot: actualiza el panel en tiempo real cada vez que
+  // cambie el documento del usuario en Firestore
+  _panelUnsub = db.collection('users').doc(uid).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
 
-  // Renderizar panel
-  _renderPanel(uid, data);
+    // Actualizar caché local y lista de clientes
+    const idx = allClients.findIndex(c => c.uid === uid);
+    if (idx !== -1) allClients[idx] = { uid, ...data };
+    else allClients.push({ uid, ...data });
+    filteredClients = [...allClients];
+    filteredClients.sort((a,b) => (b.stamps||0)-(a.stamps||0) || (a.nombre||'').localeCompare(b.nombre||''));
+
+    // Re-renderizar panel y lista
+    _renderPanel(uid, data);
+    renderClientList();
+  });
 
   document.getElementById('clientPanel').classList.add('open');
   document.getElementById('panelOverlay').classList.add('open');
 }
 
 function cerrarPanel() {
+  // Detener suscripción al cerrar el panel
+  if (_panelUnsub) { _panelUnsub(); _panelUnsub = null; }
+
   document.getElementById('clientPanel').classList.remove('open');
   document.getElementById('panelOverlay').classList.remove('open');
   currentClientUid = null;
@@ -1560,16 +1573,8 @@ async function accionSello(delta) {
   try {
     const nota = delta > 0 ? 'Sello añadido manualmente' : 'Sello quitado manualmente';
     await _modificarStamps(currentClientUid, delta, nota);
-    const snap = await db.collection('users').doc(currentClientUid).get();
-    _renderPanel(currentClientUid, snap.data());
-
-    // Actualizar cache y lista
-    const idx = allClients.findIndex(c => c.uid === currentClientUid);
-    if (idx !== -1) allClients[idx] = { uid: currentClientUid, ...snap.data() };
-    filteredClients = [...allClients];
-    renderClientList();
-
-    showMiniToast(delta > 0 ? `+1 sello sumado ✓` : `Sello quitado`);
+    // onSnapshot actualiza el panel y la lista automáticamente
+    showMiniToast(delta > 0 ? '+1 sello sumado ✓' : 'Sello quitado');
   } catch(e) { alert(e.message); }
 }
 
@@ -1585,13 +1590,7 @@ async function canjearPremio() {
 
   try {
     await _canjearStamps(currentClientUid, selectedPremio.sellos, selectedPremio.nombre);
-    const snap = await db.collection('users').doc(currentClientUid).get();
-    _renderPanel(currentClientUid, snap.data());
-
-    const idx = allClients.findIndex(c => c.uid === currentClientUid);
-    if (idx !== -1) allClients[idx] = { uid: currentClientUid, ...snap.data() };
-    filteredClients = [...allClients];
-    renderClientList();
+    // onSnapshot actualiza el panel y la lista automáticamente
 
     document.getElementById('canjeMsg').textContent = `✓ ${selectedPremio.nombre} canjeado.`;
     document.getElementById('canjeMsg').className   = 'text-xs text-center mt-2 text-admin-accent';
@@ -1613,13 +1612,11 @@ async function resetearSellos() {
   const ant  = snap.data().stamps || 0;
   await ref.update({
     stamps: 0,
-    historialSellos: firebase.firestore.FieldValue.arrayUnion({ fecha: new Date().toISOString(), tipo:'reset', cantidad:-ant, nota:'Reseteo manual' })
+    historialSellos: firebase.firestore.FieldValue.arrayUnion({
+      fecha: new Date().toISOString(), tipo: 'reset', cantidad: -ant, nota: 'Reseteo manual'
+    })
   });
-  const snap2 = await db.collection('users').doc(currentClientUid).get();
-  _renderPanel(currentClientUid, snap2.data());
-  const idx = allClients.findIndex(c => c.uid === currentClientUid);
-  if (idx !== -1) allClients[idx] = { uid: currentClientUid, ...snap2.data() };
-  filteredClients = [...allClients]; renderClientList();
+  // onSnapshot actualiza el panel y la lista automáticamente
   showMiniToast('Sellos reseteados a 0');
 }
 
