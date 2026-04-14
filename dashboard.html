@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050505">
+  <title>Mi Club | Barbería Ferraza</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#050505', text: '#f8fafc',
+              accent: '#ffffff', card: '#111115', border: '#1f2937'
+            }
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          keyframes: {
+            fadeSlideUp: {
+              '0%':   { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' }
+            },
+            stampPop: {
+              '0%':   { transform: 'scale(0.5)', opacity:'0' },
+              '70%':  { transform: 'scale(1.15)' },
+              '100%': { transform: 'scale(1)',   opacity:'1' }
+            }
+          },
+          animation: {
+            'fade-up':   'fadeSlideUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
+            'stamp-pop': 'stampPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { background-color:#050505; color:#f8fafc; overscroll-behavior-y:none; -webkit-tap-highlight-color:transparent; }
+    .text-neon { color:#fff; text-shadow:0 0 5px rgba(255,255,255,0.4),0 0 10px rgba(255,255,255,0.2); }
+    .border-neon { border-color:#fff; box-shadow:0 0 6px rgba(255,255,255,0.2),inset 0 0 6px rgba(255,255,255,0.05); }
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+    /* Masonry grid para Lookbook */
+    .masonry-grid {
+      columns: 2;
+      column-gap: 0.75rem;
+    }
+    .masonry-item {
+      break-inside: avoid;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Bottom nav active indicator */
+    .nav-tab { transition: all 0.2s; }
+    .nav-tab.active .nav-icon { color: #ffffff; filter: drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+    .nav-tab.active .nav-label { color: #ffffff; }
+    .nav-tab .nav-icon  { color: #6b7280; }
+    .nav-tab .nav-label { color: #6b7280; }
+  </style>
+</head>
+
+<body class="font-sans antialiased min-h-screen">
+
+  <!-- ── Auth Guard (pantalla de carga inicial) ── -->
+  <div id="authGuard" class="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50">
+    <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+    <span class="text-xs text-gray-500">Cargando...</span>
+  </div>
+
+  <!-- ── CONTENEDOR PRINCIPAL ── -->
+  <div class="max-w-md mx-auto relative pb-44">
+
+    <!-- HEADER -->
+    <header class="px-6 pt-8 pb-5 flex items-center justify-between sticky top-0 bg-[#050505]/95 backdrop-blur-md z-30 border-b border-white/5">
+      <img src="logo.jpg" alt="Ferraza" class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.15)]">
+      <div class="text-center">
+        <h1 class="text-base font-bold text-neon tracking-tight leading-none">Mi Club Ferraza</h1>
+        <p id="headerGreeting" class="text-[11px] text-gray-500 mt-0.5">Cargando...</p>
+      </div>
+      <div id="avatarContainer" class="w-9 h-9 rounded-full bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
+        <i class="ph-fill ph-user text-gray-500 text-lg"></i>
+      </div>
+    </header>
+
+    <!-- ═══════ PESTAÑA 1: FIDELIZACIÓN ═══════ -->
+    <section id="tabLoyalty" class="tab-panel px-5 pt-6 animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+
+      <!-- Tarjeta de sellos -->
+      <div class="relative rounded-3xl border border-neon bg-[#0a0a0d] p-6 shadow-[0_0_30px_rgba(255,255,255,0.08)] overflow-hidden mb-6">
+        <!-- Brillo de fondo decorativo -->
+        <div class="absolute -top-12 -right-12 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tarjeta de Fidelización</p>
+            <h2 class="text-xl font-bold text-neon">Barbería Ferraza</h2>
+          </div>
+          <div class="flex flex-col items-end">
+            <span class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Sellos</span>
+            <span id="stampsCount" class="text-3xl font-bold text-neon leading-none">0<span class="text-base text-white/40">/10</span></span>
+          </div>
+        </div>
+
+        <!-- Grid de 10 sellos -->
+        <div id="stampsGrid" class="grid grid-cols-5 gap-3 mb-5">
+          <!-- Renderizado por JS -->
+        </div>
+
+        <!-- Barra de progreso -->
+        <div class="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
+          <div id="stampsBar" class="h-1.5 rounded-full bg-white transition-all duration-700 shadow-[0_0_8px_rgba(255,255,255,0.5)]" style="width:0%"></div>
+        </div>
+        <p id="stampsMsg" class="text-[11px] text-gray-500 mt-2 text-right font-medium"></p>
+      </div>
+
+      <!-- Premio siguiente -->
+      <div class="mb-6 bg-brand-card rounded-2xl border border-white/8 px-5 py-4 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+          <i class="ph-fill ph-trophy text-white text-xl drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]"></i>
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Próximo premio</p>
+          <p id="nextRewardText" class="text-sm font-bold text-brand-text mt-0.5">Cargando...</p>
+        </div>
+      </div>
+
+      <!-- Lista de premios -->
+      <h3 class="text-xs font-bold text-white/40 uppercase tracking-widest mb-3 px-1">Tabla de Premios</h3>
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <span class="text-xl font-black text-neon leading-none">5</span>
+          <div class="w-px h-6 bg-white/10"></div>
+          <div>
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
+            <p class="text-sm font-bold text-brand-text">Perfilado de cejas gratis</p>
+          </div>
+          <i class="ph-fill ph-sparkle text-white/20 ml-auto text-lg"></i>
+        </div>
+        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <span class="text-xl font-black text-neon leading-none">10</span>
+          <div class="w-px h-6 bg-white/10"></div>
+          <div>
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
+            <p class="text-sm font-bold text-brand-text">Corte clásico gratis</p>
+          </div>
+          <i class="ph-fill ph-crown text-white/20 ml-auto text-lg"></i>
+        </div>
+        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <span class="text-xl font-black text-neon leading-none">15</span>
+          <div class="w-px h-6 bg-white/10"></div>
+          <div>
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
+            <p class="text-sm font-bold text-brand-text">Corte + Barba premium gratis</p>
+          </div>
+          <i class="ph-fill ph-star text-white/20 ml-auto text-lg"></i>
+        </div>
+      </div>
+
+      <!-- Nota info -->
+      <p class="text-[11px] text-gray-600 text-center mt-5 leading-relaxed">
+        Cada visita a la barbería suma un sello.<br>Tu barbero lo registra al terminar el corte.
+      </p>
+    </section>
+
+    <!-- ═══════ PESTAÑA 2: LOOKBOOK ═══════ -->
+    <section id="tabLookbook" class="tab-panel hidden px-5 pt-6 animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+      <div class="mb-5">
+        <h2 class="text-2xl font-bold text-neon tracking-tight">Lookbook</h2>
+        <p class="text-sm text-gray-500 mt-1">Cortes y estilos de la barbería.</p>
+      </div>
+
+      <!-- Masonry grid de fotos -->
+      <div class="masonry-grid" id="lookbookGrid">
+        <!-- Las imágenes se cargan dinámicamente. Aquí van los placeholders de ejemplo: -->
+      </div>
+
+      <!-- Empty state si no hay fotos -->
+      <div id="lookbookEmpty" class="hidden flex-col items-center justify-center text-center py-20">
+        <i class="ph ph-images text-5xl text-white/10 mb-4"></i>
+        <p class="text-sm text-gray-600 font-medium">Las fotos del lookbook<br>se subirán pronto.</p>
+      </div>
+    </section>
+
+    <!-- ═══════ PESTAÑA 3: MI PERFIL ═══════ -->
+    <section id="tabProfile" class="tab-panel hidden px-5 pt-6 animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+
+      <!-- Avatar + datos -->
+      <div class="flex flex-col items-center mb-8">
+        <div id="profileAvatar" class="w-20 h-20 rounded-full bg-brand-card border-2 border-neon shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center overflow-hidden mb-4">
+          <i class="ph-fill ph-user text-4xl text-gray-500"></i>
+        </div>
+        <h2 id="profileName" class="text-xl font-bold text-neon tracking-tight">—</h2>
+        <p id="profileEmail" class="text-sm text-gray-500 mt-0.5">—</p>
+        <div class="flex items-center gap-2 mt-3">
+          <div class="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+            <i class="ph-fill ph-medal text-sm text-white/60"></i>
+            <span id="profileStamps" class="text-xs font-bold text-white/60">0 sellos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de cuenta -->
+      <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Mi Cuenta</h3>
+      <div class="space-y-2 mb-6">
+        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <i class="ph-fill ph-user text-gray-500 text-lg flex-shrink-0"></i>
+          <div class="min-w-0">
+            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Nombre</p>
+            <p id="profileNameRow" class="text-sm font-semibold text-brand-text truncate">—</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <i class="ph-fill ph-envelope text-gray-500 text-lg flex-shrink-0"></i>
+          <div class="min-w-0">
+            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Correo</p>
+            <p id="profileEmailRow" class="text-sm font-semibold text-brand-text truncate">—</p>
+          </div>
+        </div>
+        <div id="profilePhoneRow" class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+          <i class="ph-fill ph-phone text-gray-500 text-lg flex-shrink-0"></i>
+          <div class="min-w-0">
+            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Teléfono</p>
+            <p id="profilePhoneText" class="text-sm font-semibold text-brand-text truncate">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Links legales -->
+      <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Legal</h3>
+      <div class="space-y-2 mb-8">
+        <a href="privacidad.html"
+          class="flex items-center justify-between bg-brand-card rounded-2xl border border-white/8 px-5 py-4 hover:border-white/20 transition-all active:scale-[0.99]">
+          <div class="flex items-center gap-3">
+            <i class="ph-fill ph-shield-check text-gray-500 text-lg"></i>
+            <span class="text-sm font-semibold text-brand-text">Política de Privacidad</span>
+          </div>
+          <i class="ph-bold ph-arrow-right text-gray-600 text-sm"></i>
+        </a>
+        <a href="#"
+          class="flex items-center justify-between bg-brand-card rounded-2xl border border-white/8 px-5 py-4 hover:border-white/20 transition-all active:scale-[0.99]">
+          <div class="flex items-center gap-3">
+            <i class="ph-fill ph-file-text text-gray-500 text-lg"></i>
+            <span class="text-sm font-semibold text-brand-text">Términos y Condiciones</span>
+          </div>
+          <i class="ph-bold ph-arrow-right text-gray-600 text-sm"></i>
+        </a>
+      </div>
+
+      <!-- Acciones de cuenta -->
+      <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Sesión</h3>
+      <div class="space-y-3">
+        <button onclick="signOut()"
+          class="w-full flex items-center justify-center gap-2 bg-brand-card border border-white/10 text-gray-300 font-semibold py-4 rounded-2xl active:scale-[0.99] transition-all hover:border-white/25 hover:text-white text-sm">
+          <i class="ph-bold ph-sign-out text-base"></i> Cerrar Sesión
+        </button>
+        <button onclick="confirmDeleteAccount()"
+          class="w-full flex items-center justify-center gap-2 bg-red-950/30 border border-red-500/25 text-red-400 font-semibold py-4 rounded-2xl active:scale-[0.99] transition-all hover:border-red-400/50 hover:bg-red-950/50 text-sm">
+          <i class="ph-bold ph-trash text-base"></i> Eliminar Cuenta
+        </button>
+      </div>
+
+      <p class="text-[10px] text-gray-700 text-center mt-6 leading-relaxed">
+        Al eliminar tu cuenta se borran todos tus datos y sellos.<br>Esta acción es irreversible.
+      </p>
+    </section>
+
+  </div><!-- /max-w-md -->
+
+  <!-- ═══════ STICKY CTA: AGENDAR HORA ═══════ -->
+  <div class="fixed bottom-[4.5rem] left-0 right-0 z-40 flex justify-center pointer-events-none px-5">
+    <a href="reservar.html"
+      class="pointer-events-auto flex items-center gap-2 bg-white text-[#050505] font-bold px-7 py-3.5 rounded-[2rem] shadow-[0_0_30px_rgba(255,255,255,0.35),0_4px_20px_rgba(0,0,0,0.6)] active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] text-base">
+      <i class="ph-bold ph-calendar-plus text-lg"></i>
+      Agendar Hora
+    </a>
+  </div>
+
+  <!-- ═══════ BOTTOM NAVIGATION BAR ═══════ -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0d]/95 backdrop-blur-xl border-t border-white/8">
+    <div class="max-w-md mx-auto flex items-stretch">
+
+      <button class="nav-tab active flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"
+        onclick="switchTab('loyalty')" id="navLoyalty">
+        <i class="nav-icon ph-fill ph-medal text-2xl transition-all"></i>
+        <span class="nav-label text-[10px] font-bold uppercase tracking-widest transition-all">Fidelización</span>
+      </button>
+
+      <button class="nav-tab flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"
+        onclick="switchTab('lookbook')" id="navLookbook">
+        <i class="nav-icon ph-fill ph-images text-2xl transition-all"></i>
+        <span class="nav-label text-[10px] font-bold uppercase tracking-widest transition-all">Lookbook</span>
+      </button>
+
+      <button class="nav-tab flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"
+        onclick="switchTab('profile')" id="navProfile">
+        <i class="nav-icon ph-fill ph-user-circle text-2xl transition-all"></i>
+        <span class="nav-label text-[10px] font-bold uppercase tracking-widest transition-all">Mi Perfil</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- Modal de confirmación para eliminar cuenta -->
+  <div id="deleteModal" class="hidden fixed inset-0 bg-[#050505]/85 backdrop-blur-sm z-50 flex items-end justify-center px-5 pb-8">
+    <div class="w-full max-w-sm bg-[#111115] border border-white/10 rounded-3xl p-6 animate-[fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+      <div class="w-12 h-12 rounded-full bg-red-950/50 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
+        <i class="ph-fill ph-warning text-red-400 text-2xl"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white text-center mb-2">¿Eliminar tu cuenta?</h3>
+      <p class="text-sm text-gray-400 text-center leading-relaxed mb-6">
+        Se borrarán todos tus datos y sellos acumulados.<br>Esta acción <strong class="text-red-400">no se puede deshacer</strong>.
+      </p>
+      <div class="space-y-3">
+        <button onclick="deleteAccount()"
+          class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm">
+          Sí, eliminar mi cuenta
+        </button>
+        <button onclick="closeDeleteModal()"
+          class="w-full bg-white/5 border border-white/10 text-gray-400 font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm hover:bg-white/10">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── Lookbook: fotos de ejemplo (reemplaza con URLs reales o Firestore Storage) ──
+const LOOKBOOK_PHOTOS = [
+  { url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80', alt: 'Fade clásico' },
+  { url: 'https://images.unsplash.com/photo-1599351431613-18ef1fdd27e1?w=400&q=80', alt: 'Corte moderno' },
+  { url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&q=80', alt: 'Barbero en acción' },
+  { url: 'https://images.unsplash.com/photo-1622296089863-eb7fc530daa8?w=400&q=80', alt: 'Corte + barba' },
+  { url: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&q=80', alt: 'Perfil lateral' },
+  { url: 'https://images.unsplash.com/photo-1512690459411-b9245aed614b?w=400&q=80', alt: 'Herramientas de barbero' },
+  { url: 'https://images.unsplash.com/photo-1595152772835-219674b2a163?w=400&q=80', alt: 'Corte estilo' },
+  { url: 'https://images.unsplash.com/photo-1541533848490-bc8115cd6522?w=400&q=80', alt: 'Detalle de corte' },
+  { url: 'https://images.unsplash.com/photo-1634302059461-381e81bd9f57?w=400&q=80', alt: 'Barba perfilada' },
+  { url: 'https://images.unsplash.com/photo-1560066984-138daaa7b455?w=400&q=80', alt: 'Ambiente barbería' },
+];
+
+// ─── Estado global ────────────────────────────────────────────
+let currentUser   = null;
+let userStamps    = 0;
+let activeTab     = 'loyalty';
+
+// ─── Auth Guard ───────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    window.location.href = 'registro.html';
+    return;
+  }
+  currentUser = user;
+  document.getElementById('authGuard').style.display = 'none';
+  loadUserData(user);
+  initLookbook();
+});
+
+// ─── Crear documento si no existe ────────────────────────────
+async function ensureUserDoc(user, extra = {}) {
+  const ref  = db.collection('users').doc(user.uid);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    await ref.set({
+      nombre:   extra.nombre   || user.displayName || '',
+      email:    user.email     || '',
+      telefono: extra.telefono || '',
+      photoURL: user.photoURL  || null,
+      stamps:   0,
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return (await ref.get()).data();
+  }
+  // Actualizar photoURL si cambió (ej. Google)
+  if (user.photoURL && snap.data().photoURL !== user.photoURL) {
+    await ref.update({ photoURL: user.photoURL });
+  }
+  return snap.data();
+}
+
+// ─── Cargar datos del usuario desde Firestore ─────────────────
+async function loadUserData(user) {
+  try {
+    // Garantiza que siempre exista el documento en Firestore
+    const data = await ensureUserDoc(user);
+
+    const nombre   = data.nombre   || user.displayName || 'Cliente';
+    const email    = user.email    || '';
+    const telefono = data.telefono || '—';
+    userStamps     = data.stamps   || 0;
+
+    // Header
+    document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
+
+    // Avatar en header
+    if (user.photoURL) {
+      document.getElementById('avatarContainer').innerHTML =
+        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+    }
+
+    // Perfil
+    document.getElementById('profileName').textContent    = nombre;
+    document.getElementById('profileEmail').textContent   = email;
+    document.getElementById('profileNameRow').textContent  = nombre;
+    document.getElementById('profileEmailRow').textContent = email;
+    document.getElementById('profilePhoneText').textContent = telefono;
+    document.getElementById('profileStamps').textContent  = `${userStamps} sello${userStamps !== 1 ? 's' : ''}`;
+
+    if (user.photoURL) {
+      document.getElementById('profileAvatar').innerHTML =
+        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+    }
+
+    renderStamps(userStamps);
+
+  } catch (e) {
+    console.error('Error cargando datos:', e);
+  }
+}
+
+// ─── Renderizar tarjeta de sellos ─────────────────────────────
+function renderStamps(count) {
+  const grid = document.getElementById('stampsGrid');
+  grid.innerHTML = '';
+
+  for (let i = 1; i <= 10; i++) {
+    const filled  = i <= count;
+    const isLast  = i === count;
+
+    const cell = document.createElement('div');
+    cell.className = 'aspect-square rounded-xl flex items-center justify-center transition-all ' +
+      (filled
+        ? 'bg-white/10 border border-white/30 shadow-[0_0_10px_rgba(255,255,255,0.15)]'
+        : 'bg-white/3 border border-white/8');
+
+    cell.innerHTML = filled
+      ? `<i class="ph-fill ph-scissors text-xl text-neon drop-shadow-[0_0_6px_rgba(255,255,255,0.5)] ${isLast ? 'animate-[stampPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"></i>`
+      : `<span class="text-[11px] font-bold text-white/15">${i}</span>`;
+
+    grid.appendChild(cell);
+  }
+
+  // Barra de progreso
+  const pct = Math.min((count / 10) * 100, 100);
+  document.getElementById('stampsBar').style.width = pct + '%';
+  document.getElementById('stampsCount').innerHTML = `${count}<span class="text-base text-white/40">/10</span>`;
+
+  // Mensaje de progreso
+  const msgEl = document.getElementById('stampsMsg');
+  if (count === 0)        msgEl.textContent = 'Agenda tu primera cita para empezar';
+  else if (count < 5)     msgEl.textContent = `${5 - count} sello${5 - count !== 1 ? 's' : ''} para tu primer premio`;
+  else if (count < 10)    msgEl.textContent = `${10 - count} sello${10 - count !== 1 ? 's' : ''} para corte gratis`;
+  else                    msgEl.textContent = '¡Felicidades! Tienes un corte gratis';
+
+  // Próximo premio
+  const nextEl = document.getElementById('nextRewardText');
+  if (count < 5)       nextEl.textContent = `${5 - count} sellos → Perfilado de cejas gratis`;
+  else if (count < 10) nextEl.textContent = `${10 - count} sellos → Corte clásico gratis`;
+  else if (count < 15) nextEl.textContent = `${15 - count} sellos → Corte + Barba premium gratis`;
+  else                 nextEl.textContent = '¡Eres nuestro cliente más fiel!';
+}
+
+// ─── Lookbook ─────────────────────────────────────────────────
+function initLookbook() {
+  const grid  = document.getElementById('lookbookGrid');
+  const empty = document.getElementById('lookbookEmpty');
+
+  if (LOOKBOOK_PHOTOS.length === 0) {
+    empty.classList.remove('hidden');
+    empty.classList.add('flex');
+    return;
+  }
+
+  LOOKBOOK_PHOTOS.forEach(photo => {
+    const item = document.createElement('div');
+    item.className = 'masonry-item rounded-2xl overflow-hidden border border-white/8 bg-brand-card';
+    item.innerHTML = `<img src="${photo.url}" alt="${photo.alt || 'Corte Ferraza'}"
+      loading="lazy" class="w-full object-cover block" onerror="this.parentElement.remove()">`;
+    grid.appendChild(item);
+  });
+}
+
+// ─── Tab Navigation ───────────────────────────────────────────
+function switchTab(tab) {
+  if (tab === activeTab) return;
+  activeTab = tab;
+
+  const panels = { loyalty: 'tabLoyalty', lookbook: 'tabLookbook', profile: 'tabProfile' };
+  const navBtns = { loyalty: 'navLoyalty', lookbook: 'navLookbook', profile: 'navProfile' };
+
+  Object.values(panels).forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('hidden');
+    el.classList.remove('animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]');
+  });
+  Object.values(navBtns).forEach(id => document.getElementById(id).classList.remove('active'));
+
+  const activePanel = document.getElementById(panels[tab]);
+  activePanel.classList.remove('hidden');
+  void activePanel.offsetWidth;
+  activePanel.classList.add('animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]');
+  document.getElementById(navBtns[tab]).classList.add('active');
+}
+
+// ─── Sign Out ─────────────────────────────────────────────────
+async function signOut() {
+  await auth.signOut();
+  window.location.href = 'registro.html';
+}
+
+// ─── Delete Account ───────────────────────────────────────────
+function confirmDeleteAccount() {
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+async function deleteAccount() {
+  if (!currentUser) return;
+  try {
+    // Borrar documento de Firestore
+    await db.collection('users').doc(currentUser.uid).delete();
+    // Borrar cuenta de Auth
+    await currentUser.delete();
+    window.location.href = 'reservar.html';
+  } catch (err) {
+    // Firebase requiere re-autenticación reciente para deleteUser
+    if (err.code === 'auth/requires-recent-login') {
+      closeDeleteModal();
+      alert('Por seguridad, cierra sesión e ingresa de nuevo antes de eliminar tu cuenta.');
+    } else {
+      console.error(err);
+      alert('Error al eliminar la cuenta. Intenta de nuevo.');
+    }
+  }
+}
+</script>
+</body>
+</html>
