@@ -219,8 +219,11 @@
   }
 
   // ── Auth: Comprobar sesión activa ─────────────────────────────
+  // _registering evita que onAuthStateChanged redirija antes de
+  // que ensureUserDoc termine de guardar el nombre y teléfono.
+  let _registering = false;
   auth.onAuthStateChanged(user => {
-    if (user) goToDashboard();
+    if (user && !_registering) goToDashboard();
   });
 
   // ── Google Login ──────────────────────────────────────────────
@@ -267,6 +270,7 @@
       return showAlert('La contraseña debe tener al menos 6 caracteres.');
 
     showLoading('Creando cuenta...');
+    _registering = true;  // bloquear redirección automática
     try {
       const cred = await auth.createUserWithEmailAndPassword(email, password);
       await cred.user.updateProfile({ displayName: nombre });
@@ -275,6 +279,8 @@
     } catch (err) {
       hideLoading();
       showAlert(friendlyError(err.code));
+    } finally {
+      _registering = false;
     }
   }
 

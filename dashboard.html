@@ -217,31 +217,39 @@
         </div>
       </div>
 
-      <!-- Datos de cuenta -->
+      <!-- Datos de cuenta — editables -->
       <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Mi Cuenta</h3>
-      <div class="space-y-2 mb-6">
-        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <i class="ph-fill ph-user text-gray-500 text-lg flex-shrink-0"></i>
-          <div class="min-w-0">
-            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Nombre</p>
-            <p id="profileNameRow" class="text-sm font-semibold text-brand-text truncate">—</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Nombre</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-user text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editNombre" type="text" placeholder="Tu nombre"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
           </div>
         </div>
-        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <i class="ph-fill ph-envelope text-gray-500 text-lg flex-shrink-0"></i>
-          <div class="min-w-0">
-            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Correo</p>
-            <p id="profileEmailRow" class="text-sm font-semibold text-brand-text truncate">—</p>
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Correo</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-envelope text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editEmail" type="email" placeholder="tu@correo.com"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
           </div>
         </div>
-        <div id="profilePhoneRow" class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <i class="ph-fill ph-phone text-gray-500 text-lg flex-shrink-0"></i>
-          <div class="min-w-0">
-            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Teléfono</p>
-            <p id="profilePhoneText" class="text-sm font-semibold text-brand-text truncate">—</p>
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Teléfono</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-phone text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editTelefono" type="tel" placeholder="+569 XXXXXXXX"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
           </div>
         </div>
       </div>
+      <p id="profileSaveMsg" class="hidden text-xs text-center text-neon mb-3">✓ Datos guardados correctamente</p>
+      <button onclick="guardarPerfil()"
+        class="w-full bg-white/5 border border-neon text-neon font-bold py-3.5 rounded-2xl text-sm active:scale-[0.99] transition-all hover:bg-white/10 mb-6 flex items-center justify-center gap-2">
+        <i class="ph-bold ph-floppy-disk text-base"></i> Guardar cambios
+      </button>
 
       <!-- Links legales -->
       <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Legal</h3>
@@ -423,12 +431,13 @@ async function loadUserData(user) {
     }
 
     // Perfil
-    document.getElementById('profileName').textContent    = nombre;
-    document.getElementById('profileEmail').textContent   = email;
-    document.getElementById('profileNameRow').textContent  = nombre;
-    document.getElementById('profileEmailRow').textContent = email;
-    document.getElementById('profilePhoneText').textContent = telefono;
-    document.getElementById('profileStamps').textContent  = `${userStamps} sello${userStamps !== 1 ? 's' : ''}`;
+    document.getElementById('profileName').textContent  = nombre;
+    document.getElementById('profileEmail').textContent = email;
+    document.getElementById('profileStamps').textContent = `${userStamps} sello${userStamps !== 1 ? 's' : ''}`;
+    // Rellenar inputs editables
+    document.getElementById('editNombre').value   = nombre;
+    document.getElementById('editEmail').value    = email;
+    document.getElementById('editTelefono').value = data.telefono || '';
 
     if (user.photoURL) {
       document.getElementById('profileAvatar').innerHTML =
@@ -527,6 +536,43 @@ function switchTab(tab) {
 }
 
 // ─── Sign Out ─────────────────────────────────────────────────
+// ─── Guardar perfil ───────────────────────────────────────────
+async function guardarPerfil() {
+  if (!currentUser) return;
+  const nombre   = document.getElementById('editNombre').value.trim();
+  const email    = document.getElementById('editEmail').value.trim();
+  const telefono = document.getElementById('editTelefono').value.trim();
+
+  if (!nombre) return alert('El nombre no puede estar vacío.');
+
+  try {
+    // Actualizar Firestore
+    await db.collection('users').doc(currentUser.uid).update({ nombre, email, telefono });
+
+    // Actualizar Firebase Auth (displayName y email)
+    await currentUser.updateProfile({ displayName: nombre });
+    if (email && email !== currentUser.email) {
+      await currentUser.updateEmail(email);
+    }
+
+    // Actualizar UI de encabezado
+    document.getElementById('profileName').textContent  = nombre;
+    document.getElementById('profileEmail').textContent = email;
+    document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
+
+    // Mensaje de éxito
+    const msg = document.getElementById('profileSaveMsg');
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 3000);
+  } catch (e) {
+    if (e.code === 'auth/requires-recent-login') {
+      alert('Para cambiar el correo debes cerrar sesión e ingresar de nuevo.');
+    } else {
+      alert('Error al guardar: ' + e.message);
+    }
+  }
+}
+
 async function signOut() {
   await auth.signOut();
   window.location.href = 'registro.html';
