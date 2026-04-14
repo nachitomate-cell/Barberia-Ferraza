@@ -15,6 +15,12 @@
 
   <script src="config.js"></script>
   <script src="db.js"></script>
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebaseUtils.js"></script>
 
   <script>
     tailwind.config = {
@@ -280,39 +286,52 @@
       return m === 0 ? `${h}h` : `${h}h ${m}m`;
     }
 
-    function initServices() {
-      const services = DB.getServices();
+    // Caché local (alimentado por Firestore al iniciar)
+    let _fsConfig   = null;
+    let _fsServices = [];
+
+    const _ICONS = ['ph-scissors','ph-mask-happy','ph-user-focus','ph-magic-wand','ph-sparkle','ph-star'];
+
+    function _renderServicesGrid(services) {
       const grid = document.getElementById('servicesGrid');
-
-      const icons = {
-        1: 'ph-scissors', 2: 'ph-mask-happy',
-        3: 'ph-user-focus', 4: 'ph-magic-wand'
-      };
-
       grid.innerHTML = '';
-      services.forEach(s => {
-        const icon = icons[s.id] || 'ph-scissors';
+      services.forEach((s, i) => {
+        const icon = _ICONS[i % _ICONS.length];
         grid.innerHTML += `
-            <button onclick="selectService(this)" data-service-id="${s.id}" class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
-                <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
-                
-                <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
-                  <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
-                </div>
-                <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
-                <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
-                <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
-                  <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
-                </span>
-            </button>`;
+          <button onclick="selectService(this)" data-service-id="${s.id}"
+            class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
+            <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
+            <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
+              <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
+            </div>
+            <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
+            <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
+            <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
+              <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
+            </span>
+          </button>`;
       });
+    }
+
+    async function initServices() {
+      try {
+        _fsConfig   = await FDB.getConfig();
+        _fsServices = await FDB.getServicios();
+        // Fallback a localStorage si Firestore vacío
+        if (!_fsServices.length) _fsServices = DB.getServices();
+      } catch(e) {
+        console.warn('[Reservar] Firestore no disponible, usando localStorage:', e.message);
+        _fsConfig   = DB.getSettings();
+        _fsServices = DB.getServices();
+      }
+      _renderServicesGrid(_fsServices);
     }
 
     function renderCalendar() {
       const carousel = document.querySelector('#calendarCarousel');
       carousel.innerHTML = '';
       const today = new Date();
-      const settings = DB.getSettings();
+      const settings = _fsConfig || DB.getSettings();
 
       const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -381,13 +400,21 @@
       renderHours();
     }
 
-    function renderHours() {
+    async function renderHours() {
       if (!selectedServiceObj) return;
 
-      const hours = DB.getAvailableHours(currentDateStr, selectedServiceObj.duracion);
       const grid = document.getElementById('hoursGrid');
-      grid.innerHTML = '';
+      grid.innerHTML = '<p class="text-xs text-brand-neon/40 col-span-3">Cargando horarios…</p>';
 
+      let hours = [];
+      try {
+        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, _fsConfig);
+      } catch(e) {
+        // Fallback a localStorage si no hay conexión
+        hours = DB.getAvailableHours(currentDateStr, selectedServiceObj.duracion);
+      }
+
+      grid.innerHTML = '';
       if (hours.length === 0) {
         grid.innerHTML = `<p class="text-sm text-brand-neon/60">No hay horas disponibles este día.</p>`;
         return;
@@ -519,16 +546,27 @@
 
         const email = document.getElementById('clientEmail').value.trim();
 
-        DB.saveBooking({
-          fecha: currentDateStr,
-          hora: selectedTimeStr,
-          clienteNombre: nombre,
-          clienteTelefono: tel,
-          clienteEmail: email,
-          servicioNombre: selectedServiceObj.nombre,
-          duracionServicio: selectedServiceObj.duracion,
-          barbero: window._selectedBarber || SHOP.barberos[0]?.nombre || ""
-        });
+        try {
+          await FDB.addCita({
+            fecha:            currentDateStr,
+            hora:             selectedTimeStr,
+            clienteNombre:    nombre,
+            clienteTelefono:  tel,
+            clienteEmail:     email,
+            servicioNombre:   selectedServiceObj.nombre,
+            duracionServicio: selectedServiceObj.duracion,
+            barbero:          window._selectedBarber || SHOP.barberos[0]?.nombre || '',
+          });
+        } catch(e) {
+          // Fallback offline: guardar en localStorage
+          console.warn('[Reservar] Sin conexión, guardando en localStorage:', e.message);
+          DB.saveBooking({
+            fecha: currentDateStr, hora: selectedTimeStr,
+            clienteNombre: nombre, clienteTelefono: tel, clienteEmail: email,
+            servicioNombre: selectedServiceObj.nombre, duracionServicio: selectedServiceObj.duracion,
+            barbero: window._selectedBarber || SHOP.barberos[0]?.nombre || '',
+          });
+        }
 
         document.getElementById('step4').classList.add('hidden');
         document.getElementById('footerContact').classList.add('hidden');
@@ -541,7 +579,7 @@
         successEl.classList.add('flex');
 
         const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar una hora. 💈 \n- Barbero: ${window._selectedBarber || SHOP.barberos[0]?.nombre || ''} \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
-        const numBarbero = DB.getSettings().telefonoAdmin || "56900000000";
+        const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;
         document.getElementById('waBtnLink').href = `https://wa.me/${numBarbero}?text=${encodeURIComponent(waMsg)}`;
       }
     }
@@ -609,7 +647,11 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => { applyConfig(); initServices(); });
+    window.addEventListener('DOMContentLoaded', async () => {
+      applyConfig();
+      await initServices();   // carga servicios y config desde Firestore
+      renderCalendar();       // ahora que _fsConfig está listo
+    });
 
   </script>
 </body>

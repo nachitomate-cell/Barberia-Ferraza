@@ -13,12 +13,15 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
   <script src="db.js"></script>
+  <!-- Después de firebase-config.js se carga firebaseUtils -->
+
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="firebaseUtils.js"></script>
 
   <script>
     tailwind.config = {
@@ -735,6 +738,12 @@ let fsSettings        = {};
 let blockedDates      = [];
 let colacion          = null;
 
+// ── Caché de Firestore (alimentado por AppState / onSnapshot) ──
+let _serviciosCache   = [];   // servicios en tiempo real
+let _configCache      = null; // configuración en tiempo real
+let _citasDiaCache    = [];   // citas del día actual en tiempo real
+let _citasUnsub       = null; // cleanup del onSnapshot de citas
+
 // Clientes (Tab 4)
 let allClients        = [];   // Cache de Firestore
 let filteredClients   = [];
@@ -802,8 +811,25 @@ function openTab(id, btn) {
 // ══════════════════════════════════════════════════════════════
 //  TAB 1 · TIMELINE DE CITAS
 // ══════════════════════════════════════════════════════════════
-function changeAdminDate(offset) { currentAdminDate.setDate(currentAdminDate.getDate()+offset); renderTimeline(); }
-function jumpToToday() { currentAdminDate = new Date(); renderTimeline(); }
+function changeAdminDate(offset) {
+  currentAdminDate.setDate(currentAdminDate.getDate() + offset);
+  _resubscribeCitas();
+}
+function jumpToToday() {
+  currentAdminDate = new Date();
+  _resubscribeCitas();
+}
+
+// Suscripción en tiempo real para las citas del día visible
+function _resubscribeCitas() {
+  if (_citasUnsub) { _citasUnsub(); _citasUnsub = null; }
+  const dStr = dateToLocalStr(currentAdminDate);
+  _citasUnsub = AppState.subscribeCitasDia(dStr, citas => {
+    _citasDiaCache = citas;
+    renderTimeline();
+    loadMonthlyMetrics();
+  });
+}
 
 function statusKey(estado) {
   if (!estado || estado === 'Confirmado') return 'Pendiente';
@@ -815,12 +841,17 @@ function renderTimeline() {
   document.getElementById('adminDateText').textContent =
     currentAdminDate.toLocaleDateString('es-CL', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
-  const settings    = DB.getSettings();
-  const allSrvs     = DB.getServices();
-  const dayBookings = DB.getBookings().filter(b => b.fecha === dStr);
-  const start       = timeToMins(settings.horarioInicio || '09:00');
-  const end         = timeToMins(settings.horarioFin    || '20:00');
-  const interval    = parseInt(settings.intervaloMinutos) || 30;
+  // Usar caché de Firestore (alimentado por onSnapshot)
+  const settings    = _configCache || {};
+  const allSrvs     = _serviciosCache;
+  const dayBookings = _citasDiaCache;
+
+  // Horario específico del día si está configurado
+  const dw  = currentAdminDate.getDay();
+  const dc  = (settings.diasConfig || {})[dw] || {};
+  const start    = timeToMins(dc.inicio || settings.horarioInicio || '09:00');
+  const end      = timeToMins(dc.fin    || settings.horarioFin    || '20:00');
+  const interval = parseInt(settings.intervaloMinutos) || 30;
 
   const todayStr  = dateToLocalStr(new Date());
   const nowMins   = new Date().getHours()*60 + new Date().getMinutes();
@@ -905,9 +936,8 @@ function renderTimeline() {
 
 // ── Cambio de estado + prompt de sello ──────────────────────────
 async function updateBookingEstado(id, nuevoEstado, booking) {
-  DB.updateBookingStatus(id, nuevoEstado);
-  renderTimeline();
-  loadMonthlyMetrics();
+  // Actualizar en Firestore → onSnapshot dispara renderTimeline automáticamente
+  await FDB.updateCitaEstado(id, nuevoEstado);
 
   if (nuevoEstado !== 'Completada') return;
 
@@ -962,27 +992,29 @@ function quickBook(time) {
   document.getElementById('mb-hora').disabled = false;
 }
 
-function loadMonthlyMetrics() {
-  const now    = new Date();
-  const yyyyMM = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
-  const bks    = DB.getBookings().filter(b => b.fecha.startsWith(yyyyMM));
-  const srvs   = DB.getServices();
-  let rev=0, comp=0, pend=0;
-  bks.forEach(b => {
-    const s = srvs.find(sv => sv.nombre === b.servicioNombre) || {precio:0};
-    if (b.estado === 'Completada') { rev += s.precio; comp++; }
-    if (!b.estado || b.estado === 'Confirmado' || b.estado === 'Pendiente') pend++;
-  });
-  document.getElementById('monthlyRevTotal').textContent = '$' + rev.toLocaleString('es-CL');
-  document.getElementById('monthlyRevCount').textContent = comp;
-  document.getElementById('monthlyPending').textContent  = pend;
+async function loadMonthlyMetrics() {
+  try {
+    const now    = new Date();
+    const yyyyMM = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+    const bks    = await FDB.getCitasMes(yyyyMM);
+    const srvs   = _serviciosCache;
+    let rev = 0, comp = 0, pend = 0;
+    bks.forEach(b => {
+      const s = srvs.find(sv => sv.nombre === b.servicioNombre) || { precio: 0 };
+      if (b.estado === 'Completada') { rev += s.precio; comp++; }
+      if (!b.estado || b.estado === 'Confirmado' || b.estado === 'Pendiente') pend++;
+    });
+    document.getElementById('monthlyRevTotal').textContent = '$' + rev.toLocaleString('es-CL');
+    document.getElementById('monthlyRevCount').textContent = comp;
+    document.getElementById('monthlyPending').textContent  = pend;
+  } catch(e) { console.warn('[Admin] loadMonthlyMetrics:', e.message); }
 }
 
 // ══════════════════════════════════════════════════════════════
 //  TAB 2 · SERVICIOS — EDICIÓN + DRAG & DROP
 // ══════════════════════════════════════════════════════════════
 function loadServicesAdmin() {
-  const srvs = DB.getServices();
+  const srvs   = _serviciosCache;   // Usa caché Firestore (actualizado por onSnapshot)
   const listEl = document.getElementById('servicesAdminList');
   listEl.innerHTML = '';
 
@@ -1010,38 +1042,41 @@ function loadServicesAdmin() {
     card.addEventListener('drop', e => {
       e.preventDefault(); if(!dragSrcEl || dragSrcEl === card) return;
       card.classList.remove('drag-over');
-      const curr = DB.getServices();
+      const curr = [..._serviciosCache];
       const fi = curr.findIndex(sv => String(sv.id) === dragSrcEl.dataset.id);
       const ti = curr.findIndex(sv => String(sv.id) === card.dataset.id);
-      const [mv] = curr.splice(fi,1); curr.splice(ti,0,mv);
-      localStorage.setItem('barber_services', JSON.stringify(curr));
-      curr.forEach((sv,i) => db.collection('services').doc(String(sv.id)).set({...sv, orden:i},{merge:true}));
-      loadServicesAdmin();
+      const [mv] = curr.splice(fi, 1); curr.splice(ti, 0, mv);
+      // Persistir nuevo orden en Firestore → onSnapshot actualiza la UI
+      FDB.reordenarServicios(curr).catch(e => console.error('[Admin] Reorder:', e));
     });
     listEl.appendChild(card);
   });
 }
 
-function crearServicio() {
+async function crearServicio() {
   const nom = document.getElementById('ns-nombre').value.trim();
   const pre = parseInt(document.getElementById('ns-precio').value);
   const dur = parseInt(document.getElementById('ns-duracion').value);
-  if (!nom||!pre||!dur) return alert('Rellena todos los campos.');
-  DB.addService({nombre:nom,precio:pre,duracion:dur});
-  const srvs = DB.getServices(); const nv = srvs[srvs.length-1];
-  db.collection('services').doc(String(nv.id)).set({...nv, orden:srvs.length-1});
-  document.getElementById('ns-nombre').value = document.getElementById('ns-precio').value = document.getElementById('ns-duracion').value = '';
-  loadServicesAdmin();
+  if (!nom || !pre || !dur) return alert('Rellena todos los campos.');
+  try {
+    await FDB.addServicio({ nombre: nom, precio: pre, duracion: dur });
+    // onSnapshot actualiza _serviciosCache y llama loadServicesAdmin automáticamente
+    document.getElementById('ns-nombre').value  = '';
+    document.getElementById('ns-precio').value  = '';
+    document.getElementById('ns-duracion').value = '';
+  } catch(e) { alert('Error al crear servicio: ' + e.message); }
 }
 
-function borrarServ(id) {
+async function borrarServ(id) {
   if (!confirm('¿Borrar este servicio?')) return;
-  DB.deleteService(id); db.collection('services').doc(String(id)).delete().catch(()=>{});
-  loadServicesAdmin();
+  try {
+    await FDB.deleteServicio(id);
+    // onSnapshot actualiza la lista automáticamente
+  } catch(e) { alert('Error al borrar: ' + e.message); }
 }
 
 function abrirEditar(id) {
-  const s = DB.getServices().find(sv => String(sv.id)===String(id)); if(!s) return;
+  const s = _serviciosCache.find(sv => String(sv.id) === String(id)); if (!s) return;
   document.getElementById('edit-srv-id').value      = id;
   document.getElementById('edit-srv-nombre').value  = s.nombre;
   document.getElementById('edit-srv-precio').value  = s.precio;
@@ -1049,17 +1084,17 @@ function abrirEditar(id) {
   document.getElementById('editServiceModal').classList.replace('hidden','flex');
 }
 function closeEditModal() { document.getElementById('editServiceModal').classList.replace('flex','hidden'); }
-function guardarEdicionServicio() {
+async function guardarEdicionServicio() {
   const id  = document.getElementById('edit-srv-id').value;
   const nom = document.getElementById('edit-srv-nombre').value.trim();
   const pre = parseInt(document.getElementById('edit-srv-precio').value);
   const dur = parseInt(document.getElementById('edit-srv-duracion').value);
-  if(!nom||!pre||!dur) return alert('Completa todos los campos.');
-  const srvs = DB.getServices(); const idx = srvs.findIndex(s => String(s.id)===String(id)); if(idx===-1) return;
-  srvs[idx] = {...srvs[idx],nombre:nom,precio:pre,duracion:dur};
-  localStorage.setItem('barber_services', JSON.stringify(srvs));
-  db.collection('services').doc(String(id)).set({nombre:nom,precio:pre,duracion:dur,orden:idx},{merge:true});
-  closeEditModal(); loadServicesAdmin();
+  if (!nom || !pre || !dur) return alert('Completa todos los campos.');
+  try {
+    await FDB.updateServicio(id, { nombre: nom, precio: pre, duracion: dur });
+    closeEditModal();
+    // onSnapshot actualiza la lista automáticamente
+  } catch(e) { alert('Error al guardar: ' + e.message); }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1071,7 +1106,7 @@ function buildTimeOptions(selId, selected) {
 }
 
 function loadConfig() {
-  const set = DB.getSettings();
+  const set = _configCache || {};
   document.getElementById('config-intervalo').value = set.intervaloMinutos.toString();
   document.getElementById('config-tel').value       = set.telefonoAdmin || '';
   buildTimeOptions('break-inicio', colacion?.inicio||'14:00');
@@ -1110,48 +1145,47 @@ function loadConfig() {
 }
 
 function toggleDayRow(ix, inp) {
-  const set = DB.getSettings(); let cur = [...set.diasLaborales];
-  if(inp.checked){ if(!cur.includes(ix)) cur.push(ix); } else { cur=cur.filter(x=>x!==ix); }
-  DB.updateSettings({diasLaborales:cur});
-  db.collection('barber_settings').doc('main').set({diasLaborales:cur},{merge:true});
-  document.getElementById(`dayhours-${ix}`).classList.toggle('hidden',!inp.checked);
-  const track=inp.nextElementSibling; const thumb=track.querySelector('.toggle-thumb');
+  const cfg = _configCache || {};
+  let cur = [...(cfg.diasLaborales || [1,2,3,4,5,6])];
+  if (inp.checked) { if (!cur.includes(ix)) cur.push(ix); } else { cur = cur.filter(x => x !== ix); }
+  FDB.updateConfig({ diasLaborales: cur });
+  document.getElementById(`dayhours-${ix}`).classList.toggle('hidden', !inp.checked);
+  const track = inp.nextElementSibling; const thumb = track.querySelector('.toggle-thumb');
   track.style.backgroundColor = inp.checked ? '#34D399' : '';
   thumb.style.transform       = inp.checked ? 'translateX(1.25rem)' : '';
 }
 function guardarHorarioDia(ix) {
-  const ini=document.getElementById(`day-inicio-${ix}`).value, fin=document.getElementById(`day-fin-${ix}`).value;
-  if(!fsSettings.diasConfig) fsSettings.diasConfig={};
-  fsSettings.diasConfig[ix]={inicio:ini,fin};
-  db.collection('barber_settings').doc('main').set({diasConfig:fsSettings.diasConfig},{merge:true});
+  const ini = document.getElementById(`day-inicio-${ix}`).value;
+  const fin = document.getElementById(`day-fin-${ix}`).value;
+  const diasConfig = { ...((_configCache || {}).diasConfig || {}), [ix]: { inicio: ini, fin } };
+  FDB.updateConfig({ diasConfig });
 }
 function guardarColacion() {
-  const ini=document.getElementById('break-inicio').value, fin=document.getElementById('break-fin').value;
-  if(timeToMins(ini)>=timeToMins(fin)) return alert('El inicio debe ser anterior al fin.');
-  colacion={inicio:ini,fin}; db.collection('barber_settings').doc('main').set({colacion},{merge:true});
-  localStorage.setItem('barber_colacion',JSON.stringify(colacion));
-  document.getElementById('colacionStatus').textContent=`Colación activa: ${ini} – ${fin}`; renderTimeline();
+  const ini = document.getElementById('break-inicio').value;
+  const fin = document.getElementById('break-fin').value;
+  if (timeToMins(ini) >= timeToMins(fin)) return alert('El inicio debe ser anterior al fin.');
+  FDB.updateConfig({ colacion: { inicio: ini, fin } });
+  // onConfigChange actualiza _configCache y re-renderiza
 }
 function quitarColacion() {
-  colacion=null; db.collection('barber_settings').doc('main').set({colacion:null},{merge:true});
-  localStorage.removeItem('barber_colacion'); document.getElementById('colacionStatus').textContent='Sin colación.'; renderTimeline();
+  FDB.updateConfig({ colacion: null });
 }
 function agregarFechaBloqueada() {
-  const val=document.getElementById('newBlockedDate').value; if(!val) return;
-  if(blockedDates.includes(val)) return alert('Esa fecha ya está bloqueada.');
-  blockedDates.push(val); blockedDates.sort(); guardarFechasBloqueadas();
-  document.getElementById('newBlockedDate').value=''; renderBlockedDates();
+  const val = document.getElementById('newBlockedDate').value; if (!val) return;
+  const cur = (_configCache || {}).diasBloqueados || [];
+  if (cur.includes(val)) return alert('Esa fecha ya está bloqueada.');
+  const nuevo = [...cur, val].sort();
+  FDB.updateConfig({ diasBloqueados: nuevo });
+  document.getElementById('newBlockedDate').value = '';
 }
 function eliminarFechaBloqueada(d) {
-  blockedDates=blockedDates.filter(x=>x!==d); guardarFechasBloqueadas(); renderBlockedDates(); renderTimeline();
-}
-function guardarFechasBloqueadas() {
-  db.collection('barber_settings').doc('main').set({fechasBloqueadas:blockedDates},{merge:true});
-  localStorage.setItem('barber_blocked',JSON.stringify(blockedDates));
+  const cur = (_configCache || {}).diasBloqueados || [];
+  FDB.updateConfig({ diasBloqueados: cur.filter(x => x !== d) });
 }
 function renderBlockedDates() {
-  const el=document.getElementById('blockedDatesList');
-  if(!blockedDates.length){ el.innerHTML='<p class="text-xs text-gray-600 text-center py-3">Sin fechas bloqueadas.</p>'; return; }
+  const blockedDates = (_configCache || {}).diasBloqueados || [];
+  const el = document.getElementById('blockedDatesList');
+  if (!blockedDates.length) { el.innerHTML='<p class="text-xs text-gray-600 text-center py-3">Sin fechas bloqueadas.</p>'; return; }
   el.innerHTML=blockedDates.map(d=>`
     <div class="flex items-center justify-between bg-admin-bg border border-admin-border rounded-xl px-4 py-3">
       <div class="flex items-center gap-3">
@@ -1162,8 +1196,16 @@ function renderBlockedDates() {
       <button onclick="eliminarFechaBloqueada('${d}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
     </div>`).join('');
 }
-function guardarIntervalo() { const v=parseInt(document.getElementById('config-intervalo').value); DB.updateSettings({intervaloMinutos:v}); db.collection('barber_settings').doc('main').set({intervaloMinutos:v},{merge:true}); }
-function guardarTelefono()  { const v=document.getElementById('config-tel').value.trim(); if(!v) return; DB.updateSettings({telefonoAdmin:v}); db.collection('barber_settings').doc('main').set({telefonoAdmin:v},{merge:true}); showMiniToast('Número actualizado'); }
+function guardarIntervalo() {
+  const v = parseInt(document.getElementById('config-intervalo').value);
+  FDB.updateConfig({ intervaloMinutos: v });
+}
+function guardarTelefono() {
+  const v = document.getElementById('config-tel').value.trim();
+  if (!v) return;
+  FDB.updateConfig({ telefonoAdmin: v });
+  showMiniToast('Número actualizado');
+}
 
 // ══════════════════════════════════════════════════════════════
 //  TAB 4 · CLIENTES Y FIDELIZACIÓN
@@ -1507,61 +1549,10 @@ function _renderHistorial(historial) {
  * @param {number} delta - +1 o -1
  * @param {string} nota - Descripción del movimiento
  */
-async function _modificarStamps(uid, delta, nota = '') {
-  const ref  = db.collection('users').doc(uid);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('Usuario no encontrado');
-
-  const actual = snap.data().stamps || 0;
-  const nuevo  = Math.max(0, actual + delta);
-
-  await ref.update({
-    stamps:      nuevo,
-    ultimoSello: delta > 0 ? new Date().toISOString() : snap.data().ultimoSello,
-    historialSellos: firebase.firestore.FieldValue.arrayUnion({
-      fecha:    new Date().toISOString(),
-      tipo:     delta > 0 ? 'suma' : 'resta',
-      cantidad: delta,
-      nota:     nota || (delta > 0 ? 'Sello añadido' : 'Sello quitado')
-    })
-  });
-  return nuevo;
-}
-
-/**
- * Canjea un premio (resta stamps).
- * @param {string} uid     - ID del usuario
- * @param {number} costo   - Stamps a restar
- * @param {string} premio  - Nombre del premio
- */
-async function _canjearStamps(uid, costo, premio) {
-  const ref  = db.collection('users').doc(uid);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('Usuario no encontrado');
-
-  const actual = snap.data().stamps || 0;
-  if (actual < costo) throw new Error(`Stamps insuficientes (${actual}/${costo})`);
-
-  await ref.update({
-    stamps: actual - costo,
-    historialSellos: firebase.firestore.FieldValue.arrayUnion({
-      fecha:    new Date().toISOString(),
-      tipo:     'canje',
-      cantidad: -costo,
-      nota:     `Premio canjeado: ${premio}`
-    })
-  });
-  return actual - costo;
-}
-
-/**
- * Función pública para usar desde Tab Citas (auto-sello).
- * @param {string} uid - ID del usuario
- * @param {string} nota - Descripción
- */
-async function _incrementarSello(uid, nota) {
-  return _modificarStamps(uid, 1, nota || 'Cita completada');
-}
+// Delegadas a FDB (firebaseUtils.js)
+const _modificarStamps  = (uid, delta, nota) => FDB.modificarSellos(uid, delta, nota);
+const _canjearStamps    = (uid, costo, premio) => FDB.canjearSellos(uid, costo, premio);
+const _incrementarSello = (uid, nota) => FDB.incrementarSellos(uid, nota || 'Cita completada');
 
 /* ── Acciones del panel ── */
 async function accionSello(delta) {
@@ -1638,7 +1629,7 @@ async function resetearSellos() {
 function openManualBookingModal() {
   const modal = document.getElementById('manualBookingModal');
   modal.classList.replace('hidden','flex');
-  const srvs = DB.getServices();
+  const srvs = _serviciosCache;
   const sel  = document.getElementById('mb-servicio');
   sel.innerHTML = '<option value="">— Servicio —</option>';
   srvs.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.nombre} · $${s.precio.toLocaleString('es-CL')}</option>`);
@@ -1651,24 +1642,40 @@ function openManualBookingModal() {
   handleMbChange();
 }
 function closeManualBookingModal() { document.getElementById('manualBookingModal').classList.replace('flex','hidden'); }
-function handleMbChange() {
+async function handleMbChange() {
   const dateVal = document.getElementById('mb-fecha').value;
   const srvId   = document.getElementById('mb-servicio').value;
   const hourSel = document.getElementById('mb-hora');
-  if(!dateVal||!srvId){ hourSel.innerHTML='<option>Elige fecha y servicio</option>'; hourSel.disabled=true; return; }
-  const srvObj = DB.getServices().find(s => String(s.id)===String(srvId)); if(!srvObj) return;
-  const hours  = DB.getAvailableHours(dateVal, srvObj.duracion);
-  hourSel.disabled=false; hourSel.innerHTML='<option value="">— Hora —</option>';
-  hours.forEach(h => hourSel.innerHTML += h.occupied ? `<option disabled>${h.time} (Ocupado)</option>` : `<option value="${h.time}">${h.time}</option>`);
+  if (!dateVal || !srvId) { hourSel.innerHTML='<option>Elige fecha y servicio</option>'; hourSel.disabled=true; return; }
+  const srvObj = _serviciosCache.find(s => String(s.id) === String(srvId)); if (!srvObj) return;
+  hourSel.disabled = true;
+  hourSel.innerHTML = '<option>Cargando…</option>';
+  const hours = await FDB.getHorasDisponibles(dateVal, srvObj.duracion, _configCache);
+  hourSel.disabled = false;
+  hourSel.innerHTML = '<option value="">— Hora —</option>';
+  hours.forEach(h => hourSel.innerHTML += h.occupied
+    ? `<option disabled>${h.time} (Ocupado)</option>`
+    : `<option value="${h.time}">${h.time}</option>`);
 }
-function saveManualBooking() {
-  const dateVal=document.getElementById('mb-fecha').value, srvId=document.getElementById('mb-servicio').value;
-  const timeVal=document.getElementById('mb-hora').value,  nombre=document.getElementById('mb-nombre').value.trim();
-  const tel=document.getElementById('mb-telefono').value.trim(), email=document.getElementById('mb-email').value.trim();
-  if(!dateVal||!srvId||!timeVal||!nombre) return alert('Completa Fecha, Servicio, Hora y Nombre.');
-  const srvObj = DB.getServices().find(s => String(s.id)===String(srvId));
-  DB.saveBooking({ fecha:dateVal, hora:timeVal, clienteNombre:nombre, clienteTelefono:tel==='+569 '?'':tel, clienteEmail:email, servicioNombre:srvObj.nombre, duracionServicio:srvObj.duracion, barbero: SHOP.barberos[0]?.nombre || '' });
-  closeManualBookingModal(); renderTimeline();
+async function saveManualBooking() {
+  const dateVal = document.getElementById('mb-fecha').value;
+  const srvId   = document.getElementById('mb-servicio').value;
+  const timeVal = document.getElementById('mb-hora').value;
+  const nombre  = document.getElementById('mb-nombre').value.trim();
+  const tel     = document.getElementById('mb-telefono').value.trim();
+  const email   = document.getElementById('mb-email').value.trim();
+  if (!dateVal || !srvId || !timeVal || !nombre) return alert('Completa Fecha, Servicio, Hora y Nombre.');
+  const srvObj = _serviciosCache.find(s => String(s.id) === String(srvId));
+  try {
+    await FDB.addCita({
+      fecha: dateVal, hora: timeVal, clienteNombre: nombre,
+      clienteTelefono: tel === '+569 ' ? '' : tel, clienteEmail: email,
+      servicioNombre: srvObj.nombre, duracionServicio: srvObj.duracion,
+      barbero: SHOP.barberos[0]?.nombre || '',
+    });
+    closeManualBookingModal();
+    // onSnapshot actualiza el timeline automáticamente
+  } catch(e) { alert('Error al guardar cita: ' + e.message); }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1740,36 +1747,47 @@ async function guardarNuevoCliente() {
 //  FIRESTORE: Cargar config al inicio
 // ══════════════════════════════════════════════════════════════
 async function cargarSettingsFirestore() {
-  try {
-    const snap = await db.collection('barber_settings').doc('main').get();
-    if (snap.exists) {
-      const d = snap.data();
-      fsSettings   = d;
-      blockedDates = d.fechasBloqueadas || [];
-      colacion     = d.colacion         || null;
-      if (d.diasLaborales)    DB.updateSettings({ diasLaborales:    d.diasLaborales    });
-      if (d.intervaloMinutos) DB.updateSettings({ intervaloMinutos: d.intervaloMinutos });
-      if (d.telefonoAdmin)    DB.updateSettings({ telefonoAdmin:    d.telefonoAdmin    });
-    }
-  } catch(e) { console.warn('Firestore no disponible. Usando localStorage.', e.message); }
+  // Ya no es necesario — AppState.init() suscribe onConfigChange
+  // que alimenta _configCache automáticamente. Esta función queda
+  // como stub por compatibilidad con llamadas externas.
 }
 
 // ══════════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Aplicar config del negocio
+  // ── Branding ────────────────────────────────────────────────
   document.title = `Panel Admin | ${SHOP.nombre}`;
-  document.getElementById('shopLogoMobile').src       = SHOP.logo;
-  document.getElementById('shopLogoMobile').alt       = SHOP.nombreCorto;
-  document.getElementById('shopLogoSidebar').src      = SHOP.logo;
-  document.getElementById('shopLogoSidebar').alt      = SHOP.nombreCorto;
+  document.getElementById('shopLogoMobile').src            = SHOP.logo;
+  document.getElementById('shopLogoMobile').alt            = SHOP.nombreCorto;
+  document.getElementById('shopLogoSidebar').src           = SHOP.logo;
+  document.getElementById('shopLogoSidebar').alt           = SHOP.nombreCorto;
   document.getElementById('shopNombreSidebar').textContent = SHOP.nombre;
 
-  await cargarSettingsFirestore();
-  renderTimeline();
-  loadServicesAdmin();
-  loadConfig();
+  // ── AppState: migración + suscripciones en tiempo real ──────
+  // Cuando Firestore emite cambios, los callbacks actualizan
+  // los cachés locales y vuelven a renderizar la UI.
+  AppState.subscribe('servicios', srvs => {
+    _serviciosCache = srvs;
+    loadServicesAdmin();   // re-renderiza lista de servicios
+  });
+  AppState.subscribe('config', cfg => {
+    _configCache = cfg;
+    // Sincronizar variables legacy que usan otras funciones
+    blockedDates = cfg.diasBloqueados || [];
+    colacion     = cfg.colacion       || null;
+    fsSettings   = cfg;
+    loadConfig();          // re-renderiza panel de configuración
+    renderBlockedDates();
+    renderTimeline();      // re-renderiza timeline con nuevo horario
+  });
+
+  await AppState.init();   // migra localStorage → Firestore y activa onSnapshot
+
+  // ── Suscripción de citas del día actual ─────────────────────
+  _resubscribeCitas();     // activa onSnapshot para hoy
+
+  // ── Métricas del mes ────────────────────────────────────────
   loadMonthlyMetrics();
 });
 </script>
