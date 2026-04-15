@@ -5,7 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title id="pageTitle">Agendar Hora</title>
+  <title id="pageTitle">Agendar Hora | Barbería Ferraza</title>
+  <meta name="description" content="Reserva tu hora en Barbería Ferraza. Cortes, barba y más. Elige tu barbero, servicio y horario en segundos.">
+  <meta property="og:title" content="Agendar Hora | Barbería Ferraza">
+  <meta property="og:description" content="Reserva tu hora en Barbería Ferraza. Elige barbero, servicio y horario fácilmente.">
+  <meta property="og:type" content="website">
+  <meta name="robots" content="index, follow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -214,16 +219,15 @@
           <div class="absolute inset-0 rounded-full bg-brand-neon/10 animate-ping opacity-75"></div>
           <i class="ph-fill ph-check-circle text-6xl text-neon relative z-10"></i>
         </div>
-        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
-        <p class="text-brand-neon/80 font-medium mb-10 text-lg">Tu hora ha sido agendada con éxito.</p>
+        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva en el Sistema!</h2>
+        <p class="text-brand-neon/80 font-medium mb-10 text-[15px] leading-relaxed">Tu hora ya está guardada en la agenda, pero <strong class="text-white">debes enviar el WhatsApp</strong> que se acaba de abrir para que el barbero la apruebe definitivamente.</p>
         <a id="waBtnLink" href="#" target="_blank"
-          class="w-full bg-transparent border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-6 hover:bg-[#25D366]/10">
-          ¡Avísale a tu barbero! <i
+          class="w-full bg-[#25D366]/10 border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-6 hover:bg-[#25D366]/20">
+          Validar reserva por WhatsApp <i
             class="ph-bold ph-whatsapp-logo text-2xl drop-shadow-[0_0_5px_rgba(37,211,102,0.8)]"></i>
         </a>
         <button onclick="window.location.reload()"
-          class="font-bold text-brand-neon/60 hover:text-neon transition-all hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Volver
-          al inicio</button>
+          class="font-bold text-brand-neon/60 hover:text-neon transition-all hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Agendar otra hora</button>
       </section>
 
       <!-- CLUB BANNER -->
@@ -287,8 +291,9 @@
     }
 
     // Caché local (alimentado por Firestore al iniciar)
-    let _fsConfig   = null;
-    let _fsServices = [];
+    let _fsConfig        = null;
+    let _fsServices      = [];
+    let _bloqueosProximos = {}; // { "YYYY-MM-DD": true } — días con bloqueo total
 
     const _ICONS = ['ph-scissors','ph-mask-happy','ph-user-focus','ph-magic-wand','ph-sparkle','ph-star'];
 
@@ -313,6 +318,25 @@
       });
     }
 
+    // Precarga bloqueos totales de los próximos 14 días (usado en renderCalendar)
+    async function precargarBloqueos() {
+      try {
+        const today = new Date();
+        const months = new Set();
+        for (let i = 0; i < 14; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() + i);
+          months.add(`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`);
+        }
+        const resultados = await Promise.all([...months].map(mm => FDB.getBloqueosMes(mm)));
+        resultados.flat().forEach(b => {
+          if (b.todo_el_dia) _bloqueosProximos[b.fecha] = true;
+        });
+      } catch(e) {
+        console.warn('[Reservar] No se pudieron precargar bloqueos:', e.message);
+      }
+    }
+
     async function initServices() {
       try {
         _fsConfig   = await FDB.getConfig();
@@ -324,6 +348,7 @@
         _fsConfig   = DB.getSettings();
         _fsServices = DB.getServices();
       }
+      await precargarBloqueos();
       _renderServicesGrid(_fsServices);
     }
 
@@ -349,7 +374,10 @@
         let dateStr = `${d.getFullYear()}-${m}-${dayStr}`;
 
         let dw = d.getDay();
-        let disabled = !settings.diasLaborales.includes(dw);
+        const diasBloqConfig = settings.diasBloqueados || [];
+        let disabled = !settings.diasLaborales.includes(dw) ||
+                       diasBloqConfig.includes(dateStr) ||
+                       !!_bloqueosProximos[dateStr];
 
         if (disabled) {
           carousel.innerHTML += `<button class="day-btn flex-shrink-0 w-16 h-[5.5rem] rounded-2xl bg-[#0a0a0d] border border-gray-800 flex flex-col items-center justify-center text-center opacity-30 pointer-events-none">
@@ -544,6 +572,21 @@
 
         if (!nombre || !tel) return alert("Por favor ingresa tus datos para la reserva.");
 
+        // ── Anti-spam: máx. 3 reservas en 24 h, y 1 por cada 30 min ──
+        const SPAM_KEY = 'ferraza_reservas_ts';
+        const MAX_PER_DAY = 3;
+        const MIN_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos
+        const now = Date.now();
+        const stored = JSON.parse(localStorage.getItem(SPAM_KEY) || '[]');
+        const last24h = stored.filter(t => now - t < 24 * 60 * 60 * 1000);
+        if (last24h.length >= MAX_PER_DAY) {
+          return alert('Has alcanzado el límite de reservas por hoy. Intenta mañana o contáctanos directamente.');
+        }
+        if (last24h.length > 0 && now - last24h[last24h.length - 1] < MIN_INTERVAL_MS) {
+          const mins = Math.ceil((MIN_INTERVAL_MS - (now - last24h[last24h.length - 1])) / 60000);
+          return alert(`Espera ${mins} minuto${mins !== 1 ? 's' : ''} antes de realizar otra reserva.`);
+        }
+
         const email = document.getElementById('clientEmail').value.trim();
 
         try {
@@ -568,6 +611,10 @@
           });
         }
 
+        // Registrar timestamp de reserva exitosa
+        last24h.push(now);
+        localStorage.setItem(SPAM_KEY, JSON.stringify(last24h));
+
         document.getElementById('step4').classList.add('hidden');
         document.getElementById('footerContact').classList.add('hidden');
 
@@ -578,9 +625,17 @@
         successEl.classList.remove('hidden');
         successEl.classList.add('flex');
 
-        const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar una hora. 💈 \n- Barbero: ${window._selectedBarber || SHOP.barberos[0]?.nombre || ''} \n- Nombre: ${nombre} \n- Servicio: ${selectedServiceObj.nombre} \n- Fecha: ${currentDateStr} \n- Hora: ${selectedTimeStr}`;
+        const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar en su web. Soy ${nombre} y voy para un ${selectedServiceObj.nombre} a las ${selectedTimeStr} hrs el ${currentDateStr}. \n¿Todo ok? 💈`;
         const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;
-        document.getElementById('waBtnLink').href = `https://wa.me/${numBarbero}?text=${encodeURIComponent(waMsg)}`;
+        const limpio = String(numBarbero).replace(/\D/g, ''); // Quita símbolos, espacios, y el "+"
+        const waLink = `https://wa.me/${limpio}?text=${encodeURIComponent(waMsg)}`;
+        
+        document.getElementById('waBtnLink').href = waLink;
+        
+        // Abrir WhatsApp automáticamente con un pequeño retraso
+        setTimeout(() => {
+          window.open(waLink, '_blank');
+        }, 800);
       }
     }
 

@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title>Mi Club</title>
+  <title>Mi Club | Barbería Ferraza</title>
+  <meta name="description" content="Tu panel personal en Barbería Ferraza. Revisa tus sellos, canjea premios y actualiza tu perfil.">
+  <meta property="og:title" content="Mi Club | Barbería Ferraza">
+  <meta property="og:description" content="Panel de fidelidad de Barbería Ferraza. Acumula sellos y disfruta de cortes y servicios gratis.">
+  <meta property="og:type" content="website">
+  <meta name="robots" content="noindex, nofollow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,6 +24,7 @@
   <script src="config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseUtils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -142,35 +148,12 @@
         </div>
       </div>
 
-      <!-- Lista de premios -->
+      <!-- Lista de premios — renderizada dinámicamente desde Firestore -->
       <h3 class="text-xs font-bold text-white/40 uppercase tracking-widest mb-3 px-1">Tabla de Premios</h3>
-      <div class="space-y-2.5">
-        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <span class="text-xl font-black text-neon leading-none">5</span>
-          <div class="w-px h-6 bg-white/10"></div>
-          <div>
-            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
-            <p class="text-sm font-bold text-brand-text">Perfilado de cejas gratis</p>
-          </div>
-          <i class="ph-fill ph-sparkle text-white/20 ml-auto text-lg"></i>
-        </div>
-        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <span class="text-xl font-black text-neon leading-none">10</span>
-          <div class="w-px h-6 bg-white/10"></div>
-          <div>
-            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
-            <p class="text-sm font-bold text-brand-text">Corte clásico gratis</p>
-          </div>
-          <i class="ph-fill ph-crown text-white/20 ml-auto text-lg"></i>
-        </div>
-        <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-          <span class="text-xl font-black text-neon leading-none">15</span>
-          <div class="w-px h-6 bg-white/10"></div>
-          <div>
-            <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
-            <p class="text-sm font-bold text-brand-text">Corte + Barba premium gratis</p>
-          </div>
-          <i class="ph-fill ph-star text-white/20 ml-auto text-lg"></i>
+      <div id="premiosList" class="space-y-2.5">
+        <!-- Skeleton de carga -->
+        <div class="flex justify-center py-8">
+          <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
         </div>
       </div>
 
@@ -240,7 +223,7 @@
           <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Teléfono</label>
           <div class="flex items-center gap-2">
             <i class="ph-fill ph-phone text-gray-500 text-base flex-shrink-0"></i>
-            <input id="editTelefono" type="tel" placeholder="+569 XXXXXXXX"
+            <input id="editTelefono" type="tel" placeholder="+56 9 XXXX XXXX" inputmode="numeric"
               class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
           </div>
         </div>
@@ -365,9 +348,14 @@ const LOOKBOOK_PHOTOS = [
 ];
 
 // ─── Estado global ────────────────────────────────────────────
-let currentUser   = null;
-let userStamps    = 0;
-let activeTab     = 'loyalty';
+let currentUser     = null;
+let userStamps      = 0;
+let activeTab       = 'loyalty';
+let _premiosDynamic = [];      // premios cargados desde Firestore
+let _userUnsub      = null;    // cleanup onSnapshot del usuario
+let _premiosUnsub   = null;    // cleanup onSnapshot de premios
+let _prevStamps     = null;    // para detectar incremento y lanzar confetti
+let _stampsSynced   = false;   // true después del primer snapshot (no dispara confetti en carga)
 
 // ─── Aplicar Config ───────────────────────────────────────────
 document.title = `Mi Club | ${SHOP.nombre}`;
@@ -379,12 +367,25 @@ document.getElementById('shopNombreCard').textContent = SHOP.nombre;
 // ─── Auth Guard ───────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if (!user) {
+    // Limpiar suscripciones al cerrar sesión
+    if (_userUnsub)    { _userUnsub();    _userUnsub    = null; }
+    if (_premiosUnsub) { _premiosUnsub(); _premiosUnsub = null; }
     window.location.href = 'registro.html';
     return;
   }
   currentUser = user;
   document.getElementById('authGuard').style.display = 'none';
-  loadUserData(user);
+
+  // Cargar datos en tiempo real con onSnapshot
+  subscribeUserData(user);
+
+  // Suscribir premios en tiempo real
+  _premiosUnsub = FDB.onPremiosChange(premios => {
+    _premiosDynamic = premios;
+    renderPremiosDashboard(premios);
+    renderStamps(userStamps); // actualizar mensajes de progreso
+  });
+
   initLookbook();
 });
 
@@ -410,16 +411,32 @@ async function ensureUserDoc(user, extra = {}) {
   return snap.data();
 }
 
-// ─── Cargar datos del usuario desde Firestore ─────────────────
-async function loadUserData(user) {
-  try {
-    // Garantiza que siempre exista el documento en Firestore
-    const data = await ensureUserDoc(user);
+// ─── Cargar datos del usuario en tiempo real (onSnapshot) ────
+async function subscribeUserData(user) {
+  // Garantiza que siempre exista el documento en Firestore
+  await ensureUserDoc(user);
+
+  // Cancelar suscripción previa si existe
+  if (_userUnsub) { _userUnsub(); _userUnsub = null; }
+  _stampsSynced = false;
+  _prevStamps   = null;
+
+  _userUnsub = db.collection('users').doc(user.uid).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
 
     const nombre   = data.nombre   || user.displayName || 'Cliente';
     const email    = user.email    || '';
-    const telefono = data.telefono || '—';
-    userStamps     = data.stamps   || 0;
+    const stamps   = data.stamps   || 0;
+
+    // ── Detección de sello nuevo → confetti ──────────────────
+    if (_stampsSynced && stamps > _prevStamps) {
+      dispararConfetti();
+    }
+    _prevStamps   = stamps;
+    _stampsSynced = true;
+
+    userStamps = stamps;
 
     // Header
     document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
@@ -431,24 +448,73 @@ async function loadUserData(user) {
     }
 
     // Perfil
-    document.getElementById('profileName').textContent  = nombre;
-    document.getElementById('profileEmail').textContent = email;
-    document.getElementById('profileStamps').textContent = `${userStamps} sello${userStamps !== 1 ? 's' : ''}`;
-    // Rellenar inputs editables
-    document.getElementById('editNombre').value   = nombre;
-    document.getElementById('editEmail').value    = email;
-    document.getElementById('editTelefono').value = data.telefono || '';
+    document.getElementById('profileName').textContent   = nombre;
+    document.getElementById('profileEmail').textContent  = email;
+    document.getElementById('profileStamps').textContent = `${stamps} sello${stamps !== 1 ? 's' : ''}`;
+
+    // Rellenar inputs editables (solo si no tiene el foco para no interrumpir edición)
+    const nombreInput = document.getElementById('editNombre');
+    const telInput    = document.getElementById('editTelefono');
+    if (document.activeElement !== nombreInput) nombreInput.value = nombre;
+    if (document.activeElement !== telInput)    telInput.value    = data.telefono || '';
+    document.getElementById('editEmail').value = email;
 
     if (user.photoURL) {
       document.getElementById('profileAvatar').innerHTML =
         `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
     }
 
-    renderStamps(userStamps);
+    renderStamps(stamps);
 
-  } catch (e) {
-    console.error('Error cargando datos:', e);
+  }, err => console.error('[Dashboard] onSnapshot usuario:', err));
+}
+
+// ─── Confetti al recibir un sello ─────────────────────────────
+function dispararConfetti() {
+  const colors = ['#34d399', '#ffffff', '#86efac', '#d1fae5', '#6ee7b7'];
+
+  // Burst central
+  confetti({
+    particleCount: 90,
+    spread:        70,
+    origin:        { y: 0.55 },
+    colors,
+    ticks:         220,
+    scalar:        1.1,
+  });
+
+  // Rafagas laterales con leve retraso
+  setTimeout(() => {
+    confetti({ particleCount: 45, spread: 80, angle: 60,  origin: { x: 0.15, y: 0.5 }, colors });
+    confetti({ particleCount: 45, spread: 80, angle: 120, origin: { x: 0.85, y: 0.5 }, colors });
+  }, 180);
+}
+
+// ─── Renderizar lista de premios dinámica ─────────────────────
+const _DASH_PREMIO_ICONS = ['ph-sparkle','ph-scissors','ph-crown','ph-star','ph-trophy','ph-medal','ph-gift'];
+
+function renderPremiosDashboard(premios) {
+  const el = document.getElementById('premiosList');
+  if (!el) return;
+
+  if (!premios.length) {
+    el.innerHTML = `<div class="flex flex-col items-center py-8 text-center">
+      <i class="ph ph-trophy text-4xl text-white/10 mb-3"></i>
+      <p class="text-sm text-gray-600">No hay premios configurados aún.</p>
+    </div>`;
+    return;
   }
+
+  el.innerHTML = premios.map((p, i) => `
+    <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
+      <span class="text-xl font-black text-neon leading-none">${p.costoSellos}</span>
+      <div class="w-px h-6 bg-white/10"></div>
+      <div>
+        <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
+        <p class="text-sm font-bold text-brand-text">${p.nombre}</p>
+      </div>
+      <i class="ph-fill ${_DASH_PREMIO_ICONS[i % _DASH_PREMIO_ICONS.length]} text-white/20 ml-auto text-lg"></i>
+    </div>`).join('');
 }
 
 // ─── Renderizar tarjeta de sellos ─────────────────────────────
@@ -456,9 +522,11 @@ function renderStamps(count) {
   const grid = document.getElementById('stampsGrid');
   grid.innerHTML = '';
 
+  // Siempre 10 celdas; llenas hasta min(count, 10)
+  const filled10 = Math.min(count, 10);
   for (let i = 1; i <= 10; i++) {
-    const filled  = i <= count;
-    const isLast  = i === count;
+    const filled = i <= filled10;
+    const isLast = i === filled10 && count > 0;
 
     const cell = document.createElement('div');
     cell.className = 'aspect-square rounded-xl flex items-center justify-center transition-all ' +
@@ -473,24 +541,35 @@ function renderStamps(count) {
     grid.appendChild(cell);
   }
 
-  // Barra de progreso
-  const pct = Math.min((count / 10) * 100, 100);
+  // Premios dinámicos (fallback a valores por defecto si aún no cargaron)
+  const premios = _premiosDynamic.length
+    ? [..._premiosDynamic].sort((a, b) => a.costoSellos - b.costoSellos)
+    : [
+        { costoSellos: 5,  nombre: 'Perfilado de cejas gratis' },
+        { costoSellos: 10, nombre: 'Corte clásico gratis' },
+        { costoSellos: 15, nombre: 'Corte + Barba premium gratis' },
+      ];
+
+  const nextPremio = premios.find(p => count < p.costoSellos);
+  const faltan     = nextPremio ? nextPremio.costoSellos - count : 0;
+  const target     = nextPremio ? nextPremio.costoSellos : (premios[premios.length - 1]?.costoSellos || 10);
+
+  // Barra de progreso dinámica
+  const pct = Math.min((count / target) * 100, 100);
   document.getElementById('stampsBar').style.width = pct + '%';
-  document.getElementById('stampsCount').innerHTML = `${count}<span class="text-base text-white/40">/10</span>`;
+  document.getElementById('stampsCount').innerHTML =
+    `${count}<span class="text-base text-white/40">/${target}</span>`;
 
   // Mensaje de progreso
   const msgEl = document.getElementById('stampsMsg');
-  if (count === 0)        msgEl.textContent = 'Agenda tu primera cita para empezar';
-  else if (count < 5)     msgEl.textContent = `${5 - count} sello${5 - count !== 1 ? 's' : ''} para tu primer premio`;
-  else if (count < 10)    msgEl.textContent = `${10 - count} sello${10 - count !== 1 ? 's' : ''} para corte gratis`;
-  else                    msgEl.textContent = '¡Felicidades! Tienes un corte gratis';
+  if (count === 0)    msgEl.textContent = 'Agenda tu primera cita para empezar';
+  else if (nextPremio) msgEl.textContent = `${faltan} sello${faltan !== 1 ? 's' : ''} para: ${nextPremio.nombre}`;
+  else                 msgEl.textContent = '¡Eres nuestro cliente más fiel!';
 
-  // Próximo premio
+  // Próximo premio (tarjeta superior)
   const nextEl = document.getElementById('nextRewardText');
-  if (count < 5)       nextEl.textContent = `${5 - count} sellos → Perfilado de cejas gratis`;
-  else if (count < 10) nextEl.textContent = `${10 - count} sellos → Corte clásico gratis`;
-  else if (count < 15) nextEl.textContent = `${15 - count} sellos → Corte + Barba premium gratis`;
-  else                 nextEl.textContent = '¡Eres nuestro cliente más fiel!';
+  if (nextPremio) nextEl.textContent = `${faltan} sello${faltan !== 1 ? 's' : ''} → ${nextPremio.nombre}`;
+  else            nextEl.textContent = '¡Eres nuestro cliente más fiel!';
 }
 
 // ─── Lookbook ─────────────────────────────────────────────────
@@ -537,6 +616,28 @@ function switchTab(tab) {
 
 // ─── Sign Out ─────────────────────────────────────────────────
 // ─── Guardar perfil ───────────────────────────────────────────
+// ── Prefijo +56 automático para teléfono ─────────────────────
+(function initPhonePrefix() {
+  const PREFIX = '+56 9 ';
+  const input = document.getElementById('editTelefono');
+  if (!input) return;
+  input.addEventListener('focus', () => {
+    if (!input.value.startsWith('+56')) input.value = PREFIX;
+  });
+  input.addEventListener('input', () => {
+    if (!input.value.startsWith('+56')) input.value = PREFIX;
+  });
+  input.addEventListener('keydown', e => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && input.selectionStart <= PREFIX.length) {
+      e.preventDefault();
+    }
+  });
+})();
+
+function validatePhone(value) {
+  return /^\+56\s?9\s?\d{4}\s?\d{4}$/.test(value.trim());
+}
+
 async function guardarPerfil() {
   if (!currentUser) return;
   const nombre   = document.getElementById('editNombre').value.trim();
@@ -544,6 +645,8 @@ async function guardarPerfil() {
   const telefono = document.getElementById('editTelefono').value.trim();
 
   if (!nombre) return alert('El nombre no puede estar vacío.');
+  if (telefono && !validatePhone(telefono))
+    return alert('Ingresa un teléfono válido. Debe comenzar con +56 9 seguido de 8 dígitos.');
 
   try {
     // Actualizar Firestore

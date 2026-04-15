@@ -16,6 +16,8 @@ const FDB = (() => {
     SERVICIOS: 'servicios',
     CONFIG:    'configuracion',
     USERS:     'users',
+    BLOQUEOS:  'bloqueos',
+    PREMIOS:   'premios',
   };
 
   const configRef = () => db.collection(COL.CONFIG).doc('main');
@@ -252,11 +254,91 @@ const FDB = (() => {
   }
 
   /* ──────────────────────────────────────────────────────────────
+     BLOQUEOS MANUALES
+     ────────────────────────────────────────────────────────────── */
+  async function addBloqueo({ fecha, todo_el_dia, hora_inicio, hora_fin, motivo }) {
+    const ref = await db.collection(COL.BLOQUEOS).add({
+      fecha,
+      todo_el_dia:  !!todo_el_dia,
+      hora_inicio:  todo_el_dia ? null : (hora_inicio || null),
+      hora_fin:     todo_el_dia ? null : (hora_fin    || null),
+      motivo:       motivo || '',
+      creadoEn:     firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
+  async function getBloqueosDia(fecha) {
+    const snap = await db.collection(COL.BLOQUEOS).where('fecha', '==', fecha).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async function getBloqueosMes(yyyyMM) {
+    const snap = await db.collection(COL.BLOQUEOS)
+      .where('fecha', '>=', yyyyMM + '-01')
+      .where('fecha', '<=', yyyyMM + '-31')
+      .get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async function deleteBloqueo(id) {
+    await db.collection(COL.BLOQUEOS).doc(id).delete();
+  }
+
+  function onBloqueosDiaChange(fecha, callback) {
+    return db.collection(COL.BLOQUEOS)
+      .where('fecha', '==', fecha)
+      .onSnapshot(
+        snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err  => console.error('[FDB] onBloqueosDiaChange:', err)
+      );
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     PREMIOS DEL CLUB
+     ────────────────────────────────────────────────────────────── */
+  async function getPremios() {
+    const snap = await db.collection(COL.PREMIOS).orderBy('costoSellos').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async function addPremio(nombre, costoSellos) {
+    const ref = await db.collection(COL.PREMIOS).add({
+      nombre,
+      costoSellos: Number(costoSellos),
+      creadoEn:    firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
+  async function deletePremio(id) {
+    await db.collection(COL.PREMIOS).doc(id).delete();
+  }
+
+  function onPremiosChange(callback) {
+    return db.collection(COL.PREMIOS)
+      .orderBy('costoSellos')
+      .onSnapshot(
+        snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err  => console.error('[FDB] onPremiosChange:', err)
+      );
+  }
+
+  /* ──────────────────────────────────────────────────────────────
      DISPONIBILIDAD (reemplaza DB.getAvailableHours — ahora async)
+     Filtra citas ocupadas, colación y bloqueos manuales.
      ────────────────────────────────────────────────────────────── */
   async function getHorasDisponibles(fecha, duracionServicio, configOverride = null) {
-    const cfg   = configOverride || await getConfig();
-    const citas = await getCitas(fecha);
+    const cfg = configOverride || await getConfig();
+
+    // Cargar citas y bloqueos en paralelo
+    const [citas, bloqueos] = await Promise.all([
+      getCitas(fecha),
+      getBloqueosDia(fecha),
+    ]);
+
+    // Día completamente bloqueado → sin slots
+    if (bloqueos.some(b => b.todo_el_dia)) return [];
 
     const toMins  = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     const fromMin = m => `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
@@ -275,7 +357,12 @@ const FDB = (() => {
         end:   toMins(c.hora) + parseInt(c.duracionServicio),
       }));
 
-    const col = cfg.colacion;
+    // Rangos de bloqueo manual parciales
+    const rangosBloq = bloqueos
+      .filter(b => !b.todo_el_dia && b.hora_inicio && b.hora_fin)
+      .map(b => ({ start: toMins(b.hora_inicio), end: toMins(b.hora_fin) }));
+
+    const col   = cfg.colacion;
     const slots = [];
     let cur = ini;
 
@@ -285,6 +372,12 @@ const FDB = (() => {
         const colS = toMins(col.inicio), colE = toMins(col.fin);
         if (cur >= colS && cur < colE) { cur += interval; continue; }
       }
+      // Saltar bloqueo manual: omite el slot si el servicio solaparía el rango
+      const bloqueado = rangosBloq.some(r =>
+        cur < r.end && (cur + parseInt(duracionServicio)) > r.start
+      );
+      if (bloqueado) { cur += interval; continue; }
+
       const occupied = ocupados.some(o =>
         cur < o.end && (cur + parseInt(duracionServicio)) > o.start
       );
@@ -348,6 +441,10 @@ const FDB = (() => {
     onCitasDiaChange,
     // Disponibilidad
     getHorasDisponibles,
+    // Bloqueos manuales
+    addBloqueo, getBloqueosDia, getBloqueosMes, deleteBloqueo, onBloqueosDiaChange,
+    // Premios del club
+    getPremios, addPremio, deletePremio, onPremiosChange,
     // Sellos
     incrementarSellos, modificarSellos, canjearSellos,
   };
@@ -362,7 +459,7 @@ const FDB = (() => {
      AppState.subscribe('config',    cfg  => applyConfig(cfg));
    ════════════════════════════════════════════════════════════════ */
 const AppState = (() => {
-  const _state = { servicios: [], config: null, loading: true };
+  const _state = { servicios: [], config: null, premios: [], loading: true };
   const _subs  = {};       // { key: [fn, fn, ...] }
   const _unsubs = [];      // funciones de cleanup onSnapshot
 
@@ -398,6 +495,7 @@ const AppState = (() => {
     _unsubs.push(
       FDB.onServiciosChange(srvs => _emit('servicios', srvs)),
       FDB.onConfigChange(cfg   => _emit('config',    cfg)),
+      FDB.onPremiosChange(ps   => _emit('premios',   ps)),
     );
 
     _emit('loading', false);

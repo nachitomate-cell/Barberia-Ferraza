@@ -61,6 +61,14 @@
     .slot-booked-Cancelada  { border-left:3px solid #f87171; }
     .slot-booked-NoAsistio  { border-left:3px solid #6b7280; }
     .slot-break          { border-left:3px solid #6366f1; background:rgba(99,102,241,.06); }
+    .slot-blocked        {
+      border-left: 3px solid #ef4444;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent, transparent 5px,
+        rgba(239,68,68,.035) 5px, rgba(239,68,68,.035) 10px
+      );
+    }
 
     /* ── SIDE PANEL ─────────────────────────── */
     #clientPanel {
@@ -109,54 +117,174 @@
     ::-webkit-scrollbar { width:5px; height:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
     ::-webkit-scrollbar-thumb { background:#374151; border-radius:3px; }
+
+    /* ── SIDEBAR DRAWER (mobile) ─────────────────────────── */
+    #sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 100dvh;
+      z-index: 70;
+      transform: translateX(-100%);
+      transition: transform .32s cubic-bezier(.16,1,.3,1);
+    }
+    #sidebar.open { transform: translateX(0); }
+    #sidebarOverlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 65;
+      backdrop-filter: blur(2px);
+    }
+    #sidebarOverlay.open { display: block; }
+    @media (min-width: 768px) {
+      #sidebar {
+        position: relative !important;
+        transform: none !important;
+        height: auto !important;
+        z-index: auto !important;
+      }
+      #sidebarOverlay { display: none !important; }
+    }
+
+    /* ── SELLO TOAST mobile ──────────────────────────────── */
+    @media (max-width: 639px) {
+      #selloToast {
+        top: auto;
+        bottom: 5.5rem;
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+        transform: translateY(calc(100% + 6rem));
+      }
+      #selloToast.show { transform: translateY(0); }
+    }
+
+    /* ── MODAL BOTTOM SHEET (mobile) ─────────────────────── */
+    .modal-sheet {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-sheet .sheet-inner {
+      border-radius: 1.5rem 1.5rem 0 0;
+      width: 100%;
+      max-height: 92dvh;
+    }
+    @media (min-width: 640px) {
+      .modal-sheet { align-items: center; padding: 1rem; }
+      .modal-sheet .sheet-inner {
+        border-radius: 1.5rem;
+        width: auto;
+        max-height: 90dvh;
+      }
+    }
   </style>
 </head>
 
 <body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0">
 
+<!-- ══════════════════════════════════════
+     LOGIN OVERLAY — oculta el panel hasta autenticar
+══════════════════════════════════════ -->
+<div id="loginOverlay" class="fixed inset-0 z-[9999] flex items-center justify-center bg-admin-bg px-4">
+  <div class="w-full max-w-sm bg-admin-card border border-admin-border rounded-2xl p-8 shadow-2xl">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-10 h-10 rounded-xl bg-admin-accent/10 flex items-center justify-center">
+        <i class="ph-fill ph-scissors text-xl text-admin-accent"></i>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-widest">Panel Admin</p>
+        <h1 id="loginShopName" class="text-lg font-bold text-white">Barbería</h1>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold text-gray-400 mb-1.5 block uppercase tracking-wider">Correo</label>
+        <input id="loginEmail" type="email" placeholder="admin@barberia.cl" autocomplete="email"
+          class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-admin-accent transition-colors">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-400 mb-1.5 block uppercase tracking-wider">Contraseña</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"
+          class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-admin-accent transition-colors">
+      </div>
+
+      <p id="loginError" class="text-red-400 text-xs hidden"></p>
+
+      <button id="loginBtn" onclick="adminLogin()"
+        class="w-full bg-admin-accent text-admin-bg font-bold py-3 rounded-xl hover:bg-emerald-300 transition-colors text-sm mt-2">
+        Ingresar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Contenido principal (oculto hasta login) -->
+<div id="adminApp" class="hidden">
+
 <!-- ── Mobile Header ── -->
-<header class="md:hidden fixed top-0 left-0 right-0 h-16 bg-admin-card border-b border-admin-border flex items-center px-5 z-50 gap-3">
-  <img id="shopLogoMobile" src="" alt="" class="h-9 w-9 object-cover rounded-full border border-gray-700">
-  <h1 class="text-base font-bold">Panel de Administración</h1>
+<header class="md:hidden fixed top-0 left-0 right-0 h-16 bg-admin-card border-b border-admin-border flex items-center px-4 z-50 gap-3">
+  <button onclick="openSidebar()" aria-label="Menú"
+    class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors shrink-0 -ml-1">
+    <i class="ph-bold ph-list text-xl text-gray-300"></i>
+  </button>
+  <img id="shopLogoMobile" src="" alt="" class="h-8 w-8 object-cover rounded-full border border-gray-700 shrink-0">
+  <h1 class="text-sm font-bold flex-1 truncate">Panel Admin</h1>
+  <button onclick="openManualBookingModal()" aria-label="Nueva Cita"
+    class="w-10 h-10 flex items-center justify-center rounded-xl bg-admin-accent/10 hover:bg-admin-accent/20 active:bg-admin-accent/30 transition-colors shrink-0">
+    <i class="ph-bold ph-plus text-xl text-admin-accent"></i>
+  </button>
 </header>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <div class="flex h-[100dvh] overflow-hidden">
 
   <!-- ══════════════════════════════════════
        SIDEBAR
   ══════════════════════════════════════ -->
-  <aside class="hidden md:flex flex-col w-64 bg-admin-card border-r border-admin-border h-full shrink-0">
-    <div class="p-6 border-b border-admin-border flex items-center gap-3">
-      <img id="shopLogoSidebar" src="" alt="" class="h-10 w-10 object-cover rounded-full border border-gray-700">
-      <div>
+  <aside id="sidebar" class="md:flex flex-col w-72 md:w-64 bg-admin-card border-r border-admin-border md:h-full shrink-0">
+    <div class="p-5 border-b border-admin-border flex items-center gap-3">
+      <img id="shopLogoSidebar" src="" alt="" class="h-10 w-10 object-cover rounded-full border border-gray-700 shrink-0">
+      <div class="flex-1 min-w-0">
         <h1 class="text-sm font-bold leading-tight">Panel Admin</h1>
-        <p id="shopNombreSidebar" class="text-xs text-gray-500"></p>
+        <p id="shopNombreSidebar" class="text-xs text-gray-500 truncate"></p>
       </div>
+      <button onclick="closeSidebar()" aria-label="Cerrar menú"
+        class="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors shrink-0">
+        <i class="ph-bold ph-x text-lg"></i>
+      </button>
     </div>
 
-    <nav class="flex-1 p-4 space-y-1">
+    <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
       <button onclick="openTab('tab-citas',this)"
-        class="nav-btn w-full flex items-center gap-3 bg-admin-accent/10 text-admin-accent px-4 py-3 rounded-xl font-semibold text-sm transition-colors">
+        class="nav-btn w-full flex items-center gap-3 bg-admin-accent/10 text-admin-accent px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph-fill ph-calendar-check text-lg"></i> Citas de la Agenda
       </button>
       <button onclick="openTab('tab-servicios',this)"
-        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 rounded-xl font-semibold text-sm transition-colors">
+        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph ph-list-dashes text-lg"></i> Servicios
       </button>
       <button onclick="openTab('tab-config',this)"
-        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 rounded-xl font-semibold text-sm transition-colors">
+        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph ph-gear text-lg"></i> Configuración
       </button>
       <button onclick="openTab('tab-clientes',this)"
-        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 rounded-xl font-semibold text-sm transition-colors">
+        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph ph-users text-lg"></i> Clientes y Fidelización
       </button>
     </nav>
 
-    <div class="p-4 border-t border-admin-border">
+    <div class="p-4 border-t border-admin-border space-y-1">
       <button onclick="window.location.href='index.html'"
-        class="flex items-center gap-3 text-gray-500 hover:text-red-400 px-4 py-2 w-full font-medium text-sm transition-colors">
-        <i class="ph ph-sign-out text-lg"></i> Salir al Sitio
+        class="flex items-center gap-3 text-gray-500 hover:text-white px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-white/5">
+        <i class="ph ph-house text-lg"></i> Sitio Web
+      </button>
+      <button onclick="firebase.auth().signOut()"
+        class="flex items-center gap-3 text-gray-500 hover:text-red-400 px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-red-500/5">
+        <i class="ph ph-sign-out text-lg"></i> Cerrar Sesión
       </button>
     </div>
   </aside>
@@ -175,18 +303,18 @@
           <i class="ph-fill ph-trend-up text-7xl text-admin-accent"></i>
         </div>
         <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-3">Mes Actual · Solo citas completadas</p>
-        <div class="flex flex-wrap gap-6">
+        <div class="grid grid-cols-3 gap-3 sm:gap-6">
           <div>
-            <span id="monthlyRevTotal" class="block text-admin-accent text-3xl font-black mb-0.5">$0</span>
-            <span class="text-xs text-gray-500 font-medium">Ganancias confirmadas</span>
+            <span id="monthlyRevTotal" class="block text-admin-accent text-xl sm:text-3xl font-black mb-0.5 truncate">$0</span>
+            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Ganancias</span>
           </div>
           <div>
-            <span id="monthlyRevCount" class="block text-white text-2xl font-bold mb-0.5">0</span>
-            <span class="text-xs text-gray-500 font-medium">Citas completadas</span>
+            <span id="monthlyRevCount" class="block text-white text-xl sm:text-2xl font-bold mb-0.5">0</span>
+            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Completadas</span>
           </div>
           <div>
-            <span id="monthlyPending" class="block text-yellow-400 text-2xl font-bold mb-0.5">0</span>
-            <span class="text-xs text-gray-500 font-medium">Pendientes del mes</span>
+            <span id="monthlyPending" class="block text-yellow-400 text-xl sm:text-2xl font-bold mb-0.5">0</span>
+            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Pendientes</span>
           </div>
         </div>
       </div>
@@ -211,10 +339,16 @@
             Hoy
           </button>
         </div>
-        <button onclick="openManualBookingModal()"
-          class="flex items-center gap-2 bg-admin-accent text-admin-bg font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-300 transition-colors text-sm">
-          <i class="ph-bold ph-plus text-base"></i> Nueva Cita
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="openBloqueoModal()"
+            class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 font-bold px-4 py-3 min-h-[44px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-sm">
+            <i class="ph-bold ph-prohibit text-base"></i> Bloquear
+          </button>
+          <button onclick="openManualBookingModal()"
+            class="hidden sm:flex items-center gap-2 bg-admin-accent text-admin-bg font-bold px-5 py-3 min-h-[44px] rounded-xl hover:bg-emerald-300 active:bg-emerald-400 transition-colors text-sm">
+            <i class="ph-bold ph-plus text-base"></i> Nueva Cita
+          </button>
+        </div>
       </div>
 
       <!-- Stats del día -->
@@ -242,6 +376,9 @@
         </div>
         <div id="timeline" class="divide-y divide-admin-border/40"></div>
       </div>
+
+      <!-- Bloqueos activos del día -->
+      <div id="bloqueosDelDia" class="mt-4 space-y-2"></div>
     </div>
 
     <!-- ══════════════════ TAB 2: SERVICIOS ══════════════════ -->
@@ -345,6 +482,45 @@
             </div>
           </div>
         </div>
+
+        <!-- ── Premios del Club ─────────────────────────────────── -->
+        <div class="bg-admin-card border border-admin-border rounded-2xl p-6">
+          <div class="flex items-start justify-between mb-1">
+            <h3 class="font-bold flex items-center gap-2">
+              <i class="ph-fill ph-trophy text-yellow-400"></i> Premios del Club
+            </h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-5">Define los premios que obtienen los clientes por acumular sellos.</p>
+
+          <!-- Lista de premios actuales -->
+          <div id="premiosAdminList" class="space-y-2 mb-4">
+            <div class="flex justify-center py-4">
+              <div class="w-5 h-5 border-2 border-admin-border border-t-admin-accent rounded-full animate-spin"></div>
+            </div>
+          </div>
+
+          <!-- Formulario para crear premio -->
+          <div class="border-t border-admin-border pt-4">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Nuevo premio</p>
+            <div class="flex flex-wrap gap-3 items-end">
+              <div class="flex-1 min-w-[160px]">
+                <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Nombre</label>
+                <input type="text" id="np-nombre" placeholder="Ej. Corte gratis"
+                  class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent placeholder-gray-600">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Sellos</label>
+                <input type="number" id="np-sellos" placeholder="10" min="1" max="99"
+                  class="w-24 bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent">
+              </div>
+              <button onclick="crearPremio()"
+                class="bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 font-bold px-5 py-3 rounded-xl hover:bg-yellow-400/25 transition-colors text-sm flex items-center gap-2 whitespace-nowrap">
+                <i class="ph-bold ph-plus text-base"></i> Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -566,8 +742,8 @@
 <!-- ══════════════════════════════════════════════════════
      MODAL: Nueva Cita Manual
 ══════════════════════════════════════════════════════ -->
-<div id="manualBookingModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm items-center justify-center p-4">
-  <div class="bg-admin-card border border-admin-border w-full max-w-lg rounded-3xl shadow-2xl p-6 relative max-h-[90dvh] overflow-y-auto">
+<div id="manualBookingModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
+  <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-lg shadow-2xl p-6 relative overflow-y-auto">
     <button onclick="closeManualBookingModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><i class="ph-bold ph-x text-2xl"></i></button>
     <h2 class="text-xl font-bold mb-5">Nueva Cita</h2>
     <div class="space-y-4">
@@ -615,8 +791,8 @@
 <!-- ══════════════════════════════════════════════════════
      MODAL: Editar Servicio
 ══════════════════════════════════════════════════════ -->
-<div id="editServiceModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm items-center justify-center p-4">
-  <div class="bg-admin-card border border-admin-border w-full max-w-sm rounded-3xl shadow-2xl p-6 relative">
+<div id="editServiceModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
+  <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
     <button onclick="closeEditModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><i class="ph-bold ph-x text-2xl"></i></button>
     <h2 class="text-xl font-bold mb-5">Editar Servicio</h2>
     <input type="hidden" id="edit-srv-id">
@@ -646,8 +822,8 @@
 <!-- ══════════════════════════════════════════════════════
      MODAL: Nuevo Cliente Manual
 ══════════════════════════════════════════════════════ -->
-<div id="nuevoClienteModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm items-center justify-center p-4">
-  <div class="bg-admin-card border border-admin-border w-full max-w-sm rounded-3xl shadow-2xl p-6 relative">
+<div id="nuevoClienteModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
+  <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
     <button onclick="cerrarModalNuevoCliente()" class="absolute top-5 right-5 text-gray-400 hover:text-white">
       <i class="ph-bold ph-x text-2xl"></i>
     </button>
@@ -689,6 +865,88 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     MODAL: Bloquear Horario
+══════════════════════════════════════════════════════ -->
+<div id="bloqueoModal" class="hidden fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm modal-sheet">
+  <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-md shadow-2xl p-6 relative">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center shrink-0">
+          <i class="ph-fill ph-prohibit text-red-400"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-white text-base leading-tight">Bloquear Horario</h3>
+          <p class="text-[11px] text-gray-500">El bloqueo oculta estas horas en el portal del cliente</p>
+        </div>
+      </div>
+      <button onclick="closeBloqueoModal()" class="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+
+      <!-- Fecha -->
+      <div>
+        <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Fecha</label>
+        <input type="date" id="blq-fecha"
+          class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-400/50 transition-colors"
+          style="color-scheme:dark;">
+      </div>
+
+      <!-- Todo el día -->
+      <label class="flex items-center gap-3 cursor-pointer bg-admin-bg rounded-xl px-4 py-3 border border-admin-border hover:border-gray-600 transition-colors">
+        <input type="checkbox" id="blq-todo-dia" onchange="toggleBloqueoTodoDia()"
+          class="w-4 h-4 rounded accent-red-500 shrink-0">
+        <div>
+          <p class="text-sm font-semibold text-white">Bloquear todo el día</p>
+          <p class="text-[11px] text-gray-500 mt-0.5">Sin reservas en ningún horario</p>
+        </div>
+      </label>
+
+      <!-- Rango horario (se oculta si todo el día) -->
+      <div id="blq-horario-row" class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Desde</label>
+          <select id="blq-inicio"
+            class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent transition-colors"
+            style="color-scheme:dark;"></select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Hasta</label>
+          <select id="blq-fin"
+            class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent transition-colors"
+            style="color-scheme:dark;"></select>
+        </div>
+      </div>
+
+      <!-- Motivo -->
+      <div>
+        <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest">
+          Motivo <span class="normal-case font-normal text-gray-600">(opcional)</span>
+        </label>
+        <input type="text" id="blq-motivo" placeholder="Ej: Almuerzo, Trámite médico, Día libre…"
+          class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent transition-colors placeholder-gray-600">
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex gap-3 mt-6">
+      <button onclick="closeBloqueoModal()"
+        class="flex-1 bg-admin-bg border border-admin-border text-gray-400 font-bold py-3 rounded-xl hover:text-white hover:border-gray-600 transition-colors text-sm">
+        Cancelar
+      </button>
+      <button onclick="guardarBloqueo()"
+        class="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 font-bold py-3 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-colors text-sm flex items-center justify-center gap-2">
+        <i class="ph-bold ph-prohibit text-base"></i> Crear Bloqueo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      MOBILE BOTTOM NAV
 ══════════════════════════════════════════════════════ -->
 <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-admin-card border-t border-admin-border">
@@ -721,11 +979,8 @@
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTES
 // ══════════════════════════════════════════════════════════════
-const PREMIOS = [
-  { sellos: 5,  nombre: 'Perfilado de cejas gratis',   icon: 'ph-sparkle'  },
-  { sellos: 10, nombre: 'Corte clásico gratis',         icon: 'ph-scissors' },
-  { sellos: 15, nombre: 'Corte + Barba premium gratis', icon: 'ph-crown'    },
-];
+// Premios dinámicos — poblado por AppState.subscribe('premios', ...)
+let _premiosCache = [];
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
@@ -742,7 +997,9 @@ let colacion          = null;
 let _serviciosCache   = [];   // servicios en tiempo real
 let _configCache      = null; // configuración en tiempo real
 let _citasDiaCache    = [];   // citas del día actual en tiempo real
+let _bloqueosCache    = [];   // bloqueos del día actual en tiempo real
 let _citasUnsub       = null; // cleanup del onSnapshot de citas
+let _bloqueosUnsub    = null; // cleanup del onSnapshot de bloqueos
 let _panelUnsub       = null; // cleanup del onSnapshot del cliente abierto
 
 // Clientes (Tab 4)
@@ -777,9 +1034,24 @@ function formatDate(isoStr) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  SIDEBAR MÓVIL
+// ══════════════════════════════════════════════════════════════
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ══════════════════════════════════════════════════════════════
 //  NAVEGACIÓN DE TABS
 // ══════════════════════════════════════════════════════════════
 function openTab(id, btn) {
+  closeSidebar();
   // Cerrar el panel lateral de cliente al cambiar de pestaña
   cerrarPanel();
 
@@ -821,14 +1093,22 @@ function jumpToToday() {
   _resubscribeCitas();
 }
 
-// Suscripción en tiempo real para las citas del día visible
+// Suscripción en tiempo real para citas y bloqueos del día visible
 function _resubscribeCitas() {
-  if (_citasUnsub) { _citasUnsub(); _citasUnsub = null; }
+  if (_citasUnsub)    { _citasUnsub();    _citasUnsub    = null; }
+  if (_bloqueosUnsub) { _bloqueosUnsub(); _bloqueosUnsub = null; }
+
   const dStr = dateToLocalStr(currentAdminDate);
+
   _citasUnsub = AppState.subscribeCitasDia(dStr, citas => {
     _citasDiaCache = citas;
     renderTimeline();
     loadMonthlyMetrics();
+  });
+
+  _bloqueosUnsub = FDB.onBloqueosDiaChange(dStr, bloqueos => {
+    _bloqueosCache = bloqueos;
+    renderTimeline();
   });
 }
 
@@ -860,9 +1140,20 @@ function renderTimeline() {
   const timelineEl = document.getElementById('timeline');
   timelineEl.innerHTML = '';
 
-  if (blockedDates.includes(dStr)) {
-    timelineEl.innerHTML = `<div class="p-8 text-center"><i class="ph-fill ph-prohibit text-4xl text-red-400 block mb-3"></i><p class="font-bold text-red-300">Día Bloqueado</p><p class="text-sm text-gray-500 mt-1">Sin reservas este día.</p></div>`;
+  const bloqueoTodoDia = _bloqueosCache.find(b => b.todo_el_dia);
+  if (blockedDates.includes(dStr) || bloqueoTodoDia) {
+    const motivoBlq = bloqueoTodoDia?.motivo ? `: ${bloqueoTodoDia.motivo}` : '';
+    timelineEl.innerHTML = `<div class="p-8 text-center">
+      <i class="ph-fill ph-prohibit text-4xl text-red-400 block mb-3"></i>
+      <p class="font-bold text-red-300">Día Bloqueado${motivoBlq}</p>
+      <p class="text-sm text-gray-500 mt-1">Sin reservas este día.</p>
+      ${bloqueoTodoDia ? `<button onclick="eliminarBloqueo('${bloqueoTodoDia.id}')"
+        class="mt-4 text-xs font-bold text-red-400/70 hover:text-red-300 px-4 py-2 rounded-xl border border-red-500/25 hover:border-red-500/50 transition-all">
+        <i class="ph-bold ph-lock-open text-xs mr-1"></i> Desbloquear este día
+      </button>` : ''}
+    </div>`;
     document.getElementById('statCitas').textContent = '—'; document.getElementById('statIngresos').textContent = '—'; document.getElementById('statLibres').textContent = '—';
+    renderBloqueosDelDia();
     return;
   }
 
@@ -879,6 +1170,33 @@ function renderTimeline() {
         timelineEl.innerHTML += `<div class="slot-break flex items-center gap-4 px-5 py-3"><span class="text-xs font-mono font-bold text-gray-500 w-12 shrink-0">${timeStr}</span><span class="flex items-center gap-1.5 text-xs font-semibold text-indigo-400"><i class="ph ph-coffee"></i> Colación</span></div>`;
         continue;
       }
+    }
+
+    // ── Bloqueo manual parcial ────────────────────────────────
+    const bloqueosParciales = _bloqueosCache.filter(b =>
+      !b.todo_el_dia && b.hora_inicio && b.hora_fin
+    );
+    const bloqActivo = bloqueosParciales.find(b =>
+      t >= timeToMins(b.hora_inicio) && t < timeToMins(b.hora_fin)
+    );
+    if (bloqActivo) {
+      const esInicio = t === timeToMins(bloqActivo.hora_inicio);
+      timelineEl.innerHTML += `
+      <div class="slot-blocked flex items-center gap-3 px-5 py-3">
+        <span class="text-xs font-mono font-bold text-red-400/50 w-12 shrink-0">${timeStr}</span>
+        ${esInicio
+          ? `<div class="flex items-center gap-2 flex-1 min-w-0">
+               <i class="ph-fill ph-prohibit text-red-400/80 text-xs shrink-0"></i>
+               <span class="text-xs font-semibold text-red-300/80 truncate">${bloqActivo.motivo || 'Bloqueado'}</span>
+               <span class="text-[10px] text-gray-600 shrink-0">${bloqActivo.hora_inicio}–${bloqActivo.hora_fin}</span>
+             </div>
+             <button onclick="eliminarBloqueo('${bloqActivo.id}')" title="Quitar bloqueo"
+               class="shrink-0 ml-auto text-[10px] font-bold text-red-400/50 hover:text-red-400 px-2 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/50 transition-all">
+               <i class="ph-bold ph-lock-open text-xs"></i>
+             </button>`
+          : `<span class="text-[10px] text-gray-700 italic">· · ·</span>`}
+      </div>`;
+      continue;
     }
 
     const booking = dayBookings.find(b => b.hora === timeStr && b.estado !== 'Cancelada');
@@ -909,7 +1227,7 @@ function renderTimeline() {
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
             <span><i class="ph ph-scissors mr-1"></i>${booking.servicioNombre}</span>
             <span>$${srv.precio.toLocaleString('es-CL')}</span>
-            ${booking.clienteTelefono ? `<a href="https://wa.me/${(booking.clienteTelefono||'').replace(/\D/g,'')}" target="_blank" class="text-admin-accent hover:underline flex items-center gap-1"><i class="ph-fill ph-whatsapp-logo"></i> WP</a>` : ''}
+            ${booking.clienteTelefono ? `<a href="https://wa.me/${(booking.clienteTelefono||'').replace(/\D/g,'')}?text=${encodeURIComponent(`Hola ${booking.clienteNombre} 👋, te confirmamos tu cita en ${SHOP.nombre} para el día ${currentAdminDate.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})} a las ${timeStr} para el servicio de ${booking.servicioNombre}. ¡Te esperamos!`)}" target="_blank" class="text-admin-accent hover:underline flex items-center gap-1"><i class="ph-fill ph-whatsapp-logo"></i> WP</a>` : ''}
           </div>
           ${booking.nota ? `<p class="text-xs text-gray-600 mt-1 italic">"${booking.nota}"</p>` : ''}
         </div>
@@ -933,6 +1251,7 @@ function renderTimeline() {
   document.getElementById('statIngresos').textContent = '$' + totalIncome.toLocaleString('es-CL');
   document.getElementById('statLibres').textContent   = libres;
   loadMonthlyMetrics();
+  renderBloqueosDelDia();
 }
 
 // ── Cambio de estado + prompt de sello ──────────────────────────
@@ -1009,6 +1328,137 @@ async function loadMonthlyMetrics() {
     document.getElementById('monthlyRevCount').textContent = comp;
     document.getElementById('monthlyPending').textContent  = pend;
   } catch(e) { console.warn('[Admin] loadMonthlyMetrics:', e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TAB 3 · PREMIOS DEL CLUB
+// ══════════════════════════════════════════════════════════════
+const _PREMIO_ICONS = ['ph-sparkle','ph-scissors','ph-crown','ph-star','ph-trophy','ph-medal','ph-gift'];
+
+function renderPremiosAdmin() {
+  const el = document.getElementById('premiosAdminList');
+  if (!el) return;
+
+  if (!_premiosCache.length) {
+    el.innerHTML = `<div class="flex flex-col items-center py-6 text-center">
+      <i class="ph ph-trophy text-3xl text-gray-700 mb-2"></i>
+      <p class="text-sm text-gray-600">Sin premios configurados.</p>
+      <p class="text-xs text-gray-700 mt-1">Crea el primero con el formulario de abajo.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = _premiosCache.map((p, i) => `
+    <div class="flex items-center gap-3 bg-admin-bg border border-admin-border rounded-xl px-4 py-3">
+      <i class="ph-fill ${_PREMIO_ICONS[i % _PREMIO_ICONS.length]} text-yellow-400 text-base shrink-0"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-white truncate">${p.nombre}</p>
+        <p class="text-xs text-gray-500 mt-0.5">${p.costoSellos} sello${p.costoSellos !== 1 ? 's' : ''}</p>
+      </div>
+      <button onclick="borrarPremio('${p.id}')"
+        class="shrink-0 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors">
+        <i class="ph-fill ph-trash text-sm"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function crearPremio() {
+  const nombre = document.getElementById('np-nombre').value.trim();
+  const sellos = parseInt(document.getElementById('np-sellos').value);
+  if (!nombre)         return alert('Escribe el nombre del premio.');
+  if (!sellos || sellos < 1) return alert('La cantidad de sellos debe ser mayor a 0.');
+  try {
+    await FDB.addPremio(nombre, sellos);
+    document.getElementById('np-nombre').value = '';
+    document.getElementById('np-sellos').value = '';
+    showMiniToast('Premio creado');
+    // onPremiosChange → AppState → _premiosCache actualizado automáticamente
+  } catch(e) { alert('Error al crear premio: ' + e.message); }
+}
+
+async function borrarPremio(id) {
+  if (!confirm('¿Eliminar este premio?')) return;
+  try {
+    await FDB.deletePremio(id);
+    showMiniToast('Premio eliminado');
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BLOQUEOS MANUALES
+// ══════════════════════════════════════════════════════════════
+function openBloqueoModal() {
+  document.getElementById('blq-fecha').value        = dateToLocalStr(currentAdminDate);
+  document.getElementById('blq-todo-dia').checked   = false;
+  document.getElementById('blq-motivo').value       = '';
+  document.getElementById('blq-horario-row').classList.remove('hidden');
+  buildTimeOptions('blq-inicio', '13:00');
+  buildTimeOptions('blq-fin',    '14:00');
+  document.getElementById('bloqueoModal').classList.replace('hidden', 'flex');
+}
+
+function closeBloqueoModal() {
+  document.getElementById('bloqueoModal').classList.replace('flex', 'hidden');
+}
+
+function toggleBloqueoTodoDia() {
+  const todoDia = document.getElementById('blq-todo-dia').checked;
+  document.getElementById('blq-horario-row').classList.toggle('hidden', todoDia);
+}
+
+async function guardarBloqueo() {
+  const fecha   = document.getElementById('blq-fecha').value;
+  const todoDia = document.getElementById('blq-todo-dia').checked;
+  const inicio  = document.getElementById('blq-inicio').value;
+  const fin     = document.getElementById('blq-fin').value;
+  const motivo  = document.getElementById('blq-motivo').value.trim();
+
+  if (!fecha) return alert('Selecciona una fecha.');
+  if (!todoDia && timeToMins(inicio) >= timeToMins(fin))
+    return alert('La hora de inicio debe ser anterior a la hora de fin.');
+
+  try {
+    await FDB.addBloqueo({ fecha, todo_el_dia: todoDia, hora_inicio: inicio, hora_fin: fin, motivo });
+    closeBloqueoModal();
+    showMiniToast('Bloqueo creado correctamente');
+    // onBloqueosDiaChange actualizará _bloqueosCache y re-renderizará si es el día visible
+  } catch(e) { alert('Error al crear bloqueo: ' + e.message); }
+}
+
+async function eliminarBloqueo(id) {
+  if (!confirm('¿Eliminar este bloqueo?')) return;
+  try {
+    await FDB.deleteBloqueo(id);
+    showMiniToast('Bloqueo eliminado');
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
+}
+
+function renderBloqueosDelDia() {
+  const el = document.getElementById('bloqueosDelDia');
+  if (!el) return;
+  const parciales = _bloqueosCache.filter(b => !b.todo_el_dia && b.hora_inicio && b.hora_fin);
+  if (!parciales.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `
+    <div class="bg-admin-card border border-red-500/20 rounded-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-red-500/15 flex items-center gap-2">
+        <i class="ph-fill ph-prohibit text-red-400 text-sm"></i>
+        <span class="text-xs font-bold text-red-300/80 uppercase tracking-widest">Bloqueos del día</span>
+      </div>
+      <div class="divide-y divide-admin-border/40">
+        ${parciales.map(b => `
+          <div class="flex items-center gap-3 px-5 py-3">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-red-300/90">${b.hora_inicio} – ${b.hora_fin}</p>
+              ${b.motivo ? `<p class="text-xs text-gray-500 mt-0.5">${b.motivo}</p>` : ''}
+            </div>
+            <button onclick="eliminarBloqueo('${b.id}')"
+              class="shrink-0 text-xs font-bold text-red-400/60 hover:text-red-400 px-3 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/50 transition-all">
+              <i class="ph-bold ph-x text-xs mr-1"></i> Quitar
+            </button>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1204,7 +1654,9 @@ function guardarIntervalo() {
 function guardarTelefono() {
   const v = document.getElementById('config-tel').value.trim();
   if (!v) return;
-  FDB.updateConfig({ telefonoAdmin: v });
+  const limpio = v.replace(/\D/g, ''); // Deja solo los números
+  document.getElementById('config-tel').value = limpio;
+  FDB.updateConfig({ telefonoAdmin: limpio });
   showMiniToast('Número actualizado');
 }
 
@@ -1349,7 +1801,7 @@ function renderClientList() {
     const stamps   = c.stamps || 0;
     const pct      = Math.min(stamps / 10 * 100, 100);
     const initials = getInitials(c.nombre || c.email || '?');
-    const nearPrize = PREMIOS.find(p => stamps >= p.sellos);
+    const nearPrize = _premiosCache.find(p => stamps >= p.costoSellos);
     const badgeCls  = stamps >= 10 ? 'text-yellow-400 border-yellow-400/40 bg-yellow-400/10' :
                       stamps >= 5  ? 'text-admin-accent border-admin-accent/40 bg-admin-accent/10' :
                       'text-gray-500 border-admin-border bg-transparent';
@@ -1466,9 +1918,9 @@ function _renderPanel(uid, data) {
   document.getElementById('panelStampsNum').textContent = stamps;
   document.getElementById('panelProgressBar').style.width = Math.min(stamps/10*100,100) + '%';
 
-  const prox = PREMIOS.find(p => stamps < p.sellos);
+  const prox = _premiosCache.find(p => stamps < p.costoSellos);
   document.getElementById('panelStampsMsg').textContent = prox
-    ? `${prox.sellos - stamps} sello${prox.sellos-stamps!==1?'s':''} para: ${prox.nombre}`
+    ? `${prox.costoSellos - stamps} sello${prox.costoSellos-stamps!==1?'s':''} para: ${prox.nombre}`
     : '¡Máximos premios disponibles!';
 
   // Grid de sellos
@@ -1505,20 +1957,26 @@ function _renderPremios(stamps) {
   el.innerHTML = '';
   selectedPremio = null;
 
-  PREMIOS.forEach(p => {
-    const puede   = stamps >= p.sellos;
+  if (!_premiosCache.length) {
+    el.innerHTML = '<p class="text-xs text-gray-600 text-center py-3">Sin premios configurados.</p>';
+    return;
+  }
+
+  _premiosCache.forEach((p, i) => {
+    const puede   = stamps >= p.costoSellos;
+    const icon    = _PREMIO_ICONS[i % _PREMIO_ICONS.length];
     const selClass = `premio-opt w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer text-left
       ${puede ? 'border-admin-border hover:border-admin-accent/50 bg-white/3 text-white hover:bg-white/5' : 'border-admin-border/40 bg-transparent text-gray-600 cursor-not-allowed opacity-50'}`;
 
     const btn = document.createElement('button');
     btn.className    = selClass;
     btn.disabled     = !puede;
-    btn.dataset.cost = p.sellos;
+    btn.dataset.cost = p.costoSellos;
     btn.dataset.name = p.nombre;
     btn.innerHTML = `
-      <i class="ph-fill ${p.icon} text-base ${puede ? 'text-yellow-400' : 'text-gray-600'}"></i>
+      <i class="ph-fill ${icon} text-base ${puede ? 'text-yellow-400' : 'text-gray-600'}"></i>
       <span class="flex-1">${p.nombre}</span>
-      <span class="text-xs font-bold ${puede ? 'text-yellow-400' : 'text-gray-600'}">${p.sellos} ✂</span>`;
+      <span class="text-xs font-bold ${puede ? 'text-yellow-400' : 'text-gray-600'}">${p.costoSellos} ✂</span>`;
 
     if (puede) btn.onclick = () => seleccionarPremio(btn, p);
     el.appendChild(btn);
@@ -1586,11 +2044,11 @@ async function canjearPremio() {
     return;
   }
 
-  if (!confirm(`¿Canjear "${selectedPremio.nombre}" por ${selectedPremio.sellos} sellos?`)) return;
+  if (!confirm(`¿Canjear "${selectedPremio.nombre}" por ${selectedPremio.costoSellos} sellos?`)) return;
 
   try {
     const nombrePremio = selectedPremio.nombre;
-    await _canjearStamps(currentClientUid, selectedPremio.sellos, nombrePremio);
+    await _canjearStamps(currentClientUid, selectedPremio.costoSellos, nombrePremio);
     // onSnapshot actualiza el panel y la lista automáticamente
 
     document.getElementById('canjeMsg').textContent = `✓ ${nombrePremio} canjeado.`;
@@ -1753,7 +2211,75 @@ async function cargarSettingsFirestore() {
 // ══════════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async () => {
+// ══════════════════════════════════════════════════════════════
+// AUTH GATE — el panel solo carga si el barbero está logueado
+// ══════════════════════════════════════════════════════════════
+let _adminInitialized = false;
+
+const ADMIN_EMAILS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
+
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    // Autenticado y autorizado: mostrar app, ocultar overlay
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('adminApp').classList.remove('hidden');
+
+    if (!_adminInitialized) {
+      _adminInitialized = true;
+      await _initAdmin();
+    }
+  } else {
+    if (user) firebase.auth().signOut(); // sesión válida pero no autorizada
+    // No autenticado: mostrar overlay, ocultar app
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('adminApp').classList.add('hidden');
+  }
+});
+
+async function adminLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Ingresando…';
+  try {
+    const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+    if (!ADMIN_EMAILS.includes(cred.user.email)) {
+      await firebase.auth().signOut();
+      throw { code: 'auth/not-authorized' };
+    }
+    // onAuthStateChanged se activa y muestra el panel
+  } catch(e) {
+    let msg = 'Credenciales incorrectas.';
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') msg = 'Correo o contraseña incorrectos.';
+    else if (e.code === 'auth/invalid-email') msg = 'Formato de correo inválido.';
+    else if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Intenta más tarde.';
+    else if (e.code === 'auth/not-authorized') msg = 'No tienes permiso para acceder al panel.';
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Ingresar';
+  }
+}
+
+// Allow Enter key in login form
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginShopName').textContent = SHOP.nombre;
+  ['loginEmail','loginPassword'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') adminLogin();
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// INIT ADMIN — se llama UNA vez tras login exitoso
+// (el DOM ya cargó, así que no necesita DOMContentLoaded)
+// ══════════════════════════════════════════════════════════════
+async function _initAdmin() {
   // ── Branding ────────────────────────────────────────────────
   document.title = `Panel Admin | ${SHOP.nombre}`;
   document.getElementById('shopLogoMobile').src            = SHOP.logo;
@@ -1763,31 +2289,35 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('shopNombreSidebar').textContent = SHOP.nombre;
 
   // ── AppState: migración + suscripciones en tiempo real ──────
-  // Cuando Firestore emite cambios, los callbacks actualizan
-  // los cachés locales y vuelven a renderizar la UI.
   AppState.subscribe('servicios', srvs => {
     _serviciosCache = srvs;
-    loadServicesAdmin();   // re-renderiza lista de servicios
+    loadServicesAdmin();
+  });
+  AppState.subscribe('premios', premios => {
+    _premiosCache = premios;
+    renderPremiosAdmin();
+    if (currentClientUid) {
+      const cliente = allClients.find(c => c.uid === currentClientUid);
+      if (cliente) _renderPremios(cliente.stamps || 0);
+    }
   });
   AppState.subscribe('config', cfg => {
     _configCache = cfg;
-    // Sincronizar variables legacy que usan otras funciones
     blockedDates = cfg.diasBloqueados || [];
     colacion     = cfg.colacion       || null;
     fsSettings   = cfg;
-    loadConfig();          // re-renderiza panel de configuración
+    loadConfig();
     renderBlockedDates();
-    renderTimeline();      // re-renderiza timeline con nuevo horario
+    renderTimeline();
   });
 
-  await AppState.init();   // migra localStorage → Firestore y activa onSnapshot
+  await AppState.init();
 
-  // ── Suscripción de citas del día actual ─────────────────────
-  _resubscribeCitas();     // activa onSnapshot para hoy
-
-  // ── Métricas del mes ────────────────────────────────────────
+  _resubscribeCitas();
   loadMonthlyMetrics();
-});
+}
 </script>
+
+</div><!-- /adminApp -->
 </body>
 </html>

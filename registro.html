@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050505">
-  <title>Únete al Club</title>
+  <title>Únete al Club | Barbería Ferraza</title>
+  <meta name="description" content="Crea tu cuenta en el Club Ferraza. Acumula sellos, canjea premios y lleva un registro de tus visitas.">
+  <meta property="og:title" content="Únete al Club | Barbería Ferraza">
+  <meta property="og:description" content="Regístrate en Barbería Ferraza, acumula sellos y disfruta de beneficios exclusivos.">
+  <meta property="og:type" content="website">
+  <meta name="robots" content="noindex, nofollow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -108,6 +113,7 @@
         <input type="email" id="regEmail" placeholder="Correo electrónico" autocomplete="email"
           class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <input type="tel" id="regTelefono" placeholder="+56 9 1234 5678" autocomplete="tel"
+          inputmode="numeric"
           class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <div class="relative">
           <input type="password" id="regPassword" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password"
@@ -266,6 +272,8 @@
 
     if (!nombre || !email || !telefono || !password)
       return showAlert('Completa todos los campos.');
+    if (!validatePhone(telefono))
+      return showAlert('Ingresa un teléfono válido. Debe comenzar con +56 9 seguido de 8 dígitos.');
     if (password.length < 6)
       return showAlert('La contraseña debe tener al menos 6 caracteres.');
 
@@ -308,11 +316,36 @@
   });
 
   // ── Config ───────────────────────────────────────────────────
+  // ── Prefijo +56 automático para teléfono ─────────────────────
+  function initPhonePrefix(inputId) {
+    const PREFIX = '+56 9 ';
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('focus', () => {
+      if (!input.value.startsWith('+56')) input.value = PREFIX;
+    });
+    input.addEventListener('input', () => {
+      if (!input.value.startsWith('+56')) input.value = PREFIX;
+    });
+    input.addEventListener('keydown', e => {
+      const selStart = input.selectionStart;
+      if ((e.key === 'Backspace' || e.key === 'Delete') && selStart <= PREFIX.length) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  function validatePhone(value) {
+    // Acepta: +56 9 XXXX XXXX o +569XXXXXXXX y variantes con espacios
+    return /^\+56\s?9\s?\d{4}\s?\d{4}$/.test(value.trim());
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.title = `Únete al Club | ${SHOP.nombre}`;
     document.getElementById('shopLogo').src = SHOP.logo;
     document.getElementById('shopLogo').alt = SHOP.nombre;
     document.getElementById('shopNombre').textContent = SHOP.nombre;
+    initPhonePrefix('regTelefono');
   });
 </script>
 </body>
