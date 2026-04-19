@@ -17,4 +17,9 @@ if (!firebase.apps.length) {
 
 const auth    = firebase.auth();
 const db      = firebase.firestore();
-const storage = firebase.storage();
+let storage;
+try {
+  storage = firebase.storage();
+} catch(e) {
+  console.warn('[Firebase] Storage SDK no disponible en esta página');
+}
