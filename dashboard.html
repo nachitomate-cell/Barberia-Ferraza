@@ -11,6 +11,14 @@
   <meta property="og:type" content="website">
   <meta name="robots" content="noindex, nofollow">
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ferraza">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -285,7 +293,7 @@
   </div>
 
   <!-- ═══════ BOTTOM NAVIGATION BAR ═══════ -->
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0d]/95 backdrop-blur-xl border-t border-white/8">
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0d]/95 backdrop-blur-xl border-t border-white/8" style="padding-bottom: env(safe-area-inset-bottom);">
     <div class="max-w-md mx-auto flex items-stretch">
 
       <button class="nav-tab active flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"

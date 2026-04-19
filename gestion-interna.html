@@ -20,6 +20,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseUtils.js"></script>
 
@@ -274,6 +275,10 @@
       <button onclick="openTab('tab-clientes',this)"
         class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph ph-users text-lg"></i> Clientes y Fidelización
+      </button>
+      <button onclick="openTab('tab-lookbook',this)"
+        class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
+        <i class="ph ph-images text-lg"></i> Lookbook
       </button>
     </nav>
 
@@ -589,6 +594,54 @@
       <p id="noClientsMsg" class="hidden text-center text-gray-500 text-sm mt-6">
         No se encontraron clientes con ese criterio.
       </p>
+
+    </div>
+
+    <!-- ══════════════════ TAB 5: LOOKBOOK ══════════════════ -->
+    <div id="tab-lookbook" class="tab-content hidden">
+
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold tracking-tight">Lookbook</h2>
+        <p class="text-sm text-gray-500 mt-1">Sube fotos de cortes reales. Se muestran en el portal de clientes.</p>
+      </div>
+
+      <!-- Zona de subida -->
+      <div class="bg-admin-card border border-admin-border rounded-2xl p-6 mb-6">
+        <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <i class="ph-fill ph-upload-simple text-admin-accent"></i> Subir fotos
+        </h3>
+        <label id="lookbookDropzone"
+          class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-admin-accent/40 hover:bg-white/5 transition-all active:bg-white/10">
+          <i class="ph ph-images text-3xl text-white/20 mb-2"></i>
+          <span class="text-white/40 text-sm font-medium">Toca para subir fotos</span>
+          <span class="text-white/25 text-xs mt-1">JPG, PNG — máx. 5MB por foto</span>
+          <input type="file" id="lookbookFileInput" accept="image/*" multiple class="hidden">
+        </label>
+
+        <!-- Barra de progreso -->
+        <div id="lookbookProgress" class="hidden mt-4">
+          <div class="flex justify-between text-xs text-white/50 mb-1.5">
+            <span id="lookbookProgressLabel">Subiendo...</span>
+            <span id="lookbookProgressPct">0%</span>
+          </div>
+          <div class="w-full bg-white/10 rounded-full h-1.5">
+            <div id="lookbookProgressBar"
+              class="bg-admin-accent h-1.5 rounded-full transition-all duration-300"
+              style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid de fotos actuales -->
+      <div class="bg-admin-card border border-admin-border rounded-2xl p-6">
+        <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <i class="ph-fill ph-images text-admin-accent"></i> Fotos actuales
+          <span id="lookbookCount" class="text-xs font-normal text-white/40 ml-1">—</span>
+        </h3>
+        <div id="lookbookAdminGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="col-span-2 sm:col-span-3 h-24 bg-white/5 rounded-xl animate-pulse"></div>
+        </div>
+      </div>
 
     </div>
 
@@ -2315,6 +2368,132 @@ async function _initAdmin() {
 
   _resubscribeCitas();
   loadMonthlyMetrics();
+  initLookbookAdmin();
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOOKBOOK ADMIN
+// ══════════════════════════════════════════════════════════════
+
+function initLookbookAdmin() {
+  // Listener tiempo real → grid admin
+  db.collection('lookbook').orderBy('order', 'asc').onSnapshot(snap => {
+    const grid  = document.getElementById('lookbookAdminGrid');
+    const count = document.getElementById('lookbookCount');
+    if (!grid) return;
+
+    count.textContent = snap.size + ' foto' + (snap.size !== 1 ? 's' : '');
+
+    if (snap.empty) {
+      grid.innerHTML = `
+        <div class="col-span-2 sm:col-span-3 text-center text-white/30 py-10 text-sm">
+          Sin fotos. Sube la primera arriba.
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = snap.docs.map(doc => {
+      const { url } = doc.data();
+      return `
+        <div class="relative group rounded-xl overflow-hidden aspect-square bg-white/5 border border-admin-border">
+          <img src="${url}" class="w-full h-full object-cover" loading="lazy"
+               onerror="this.parentElement.classList.add('opacity-40')">
+          <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center">
+            <button onclick="deleteLookbookPhoto('${doc.id}','${url}')"
+              class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-lg active:scale-95 transition-all">
+              <i class="ph-bold ph-trash text-sm mr-1"></i>Eliminar
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }, err => {
+    console.error('[Lookbook]', err);
+    showMiniToast('Error al cargar fotos');
+  });
+
+  // Upload listener
+  document.getElementById('lookbookFileInput').addEventListener('change', async e => {
+    let files = Array.from(e.target.files);
+    e.target.value = '';
+    if (!files.length) return;
+
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const grandes  = files.filter(f => f.size > MAX_SIZE);
+    if (grandes.length) {
+      showMiniToast(grandes.length + ' foto(s) superan 5MB — omitidas');
+      files = files.filter(f => f.size <= MAX_SIZE);
+    }
+    if (!files.length) return;
+
+    const progress = document.getElementById('lookbookProgress');
+    const bar      = document.getElementById('lookbookProgressBar');
+    const pct      = document.getElementById('lookbookProgressPct');
+    const label    = document.getElementById('lookbookProgressLabel');
+    progress.classList.remove('hidden');
+
+    // Orden máximo actual
+    const snap = await db.collection('lookbook').orderBy('order', 'desc').limit(1).get();
+    let nextOrder = snap.empty ? 0 : (snap.docs[0].data().order || 0) + 1;
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        label.textContent = `Subiendo ${i + 1} de ${files.length}…`;
+
+        const name = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const ref  = storage.ref('lookbook/' + name);
+
+        await new Promise((resolve, reject) => {
+          const task = ref.put(file);
+          task.on('state_changed',
+            snap => {
+              const p = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+              bar.style.width = p + '%';
+              pct.textContent = p + '%';
+            },
+            reject,
+            async () => {
+              const url = await task.snapshot.ref.getDownloadURL();
+              await db.collection('lookbook').add({
+                url,
+                filename: name,
+                order:     nextOrder++,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+              resolve();
+            }
+          );
+        });
+      }
+
+      bar.style.width  = '100%';
+      pct.textContent  = '100%';
+      label.textContent = '¡Listo!';
+      setTimeout(() => {
+        progress.classList.add('hidden');
+        bar.style.width = '0%';
+      }, 2000);
+      showMiniToast(files.length + ' foto' + (files.length !== 1 ? 's' : '') + ' subida' + (files.length !== 1 ? 's' : '') + ' ✓');
+
+    } catch (err) {
+      progress.classList.add('hidden');
+      console.error('[Lookbook upload]', err);
+      showMiniToast('Error al subir: ' + err.message);
+    }
+  });
+}
+
+async function deleteLookbookPhoto(docId, url) {
+  if (!confirm('¿Eliminar esta foto del lookbook?')) return;
+  try {
+    await db.collection('lookbook').doc(docId).delete();
+    // Intenta borrar el archivo de Storage (falla silenciosamente si ya no existe)
+    try { await storage.refFromURL(url).delete(); } catch (_) {}
+    showMiniToast('Foto eliminada');
+  } catch (err) {
+    console.error('[Lookbook delete]', err);
+    showMiniToast('Error: ' + err.message);
+  }
 }
 </script>
 

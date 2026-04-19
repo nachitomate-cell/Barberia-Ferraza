@@ -13,6 +13,12 @@
   
   <!-- Iconos -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Firebase SDKs (para cargar fotos del lookbook) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
+  <script src="firebase-config.js"></script>
   
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -86,78 +92,12 @@
     </header>
 
     <!-- Masonry Layout Grid -->
-    <!-- columns-2 crea el efecto Pinterest/Masonry nativamente y gap-4 separa las columnas. space-y-4 separa las filas. -->
-    <div class="columns-2 gap-4 space-y-4 opacity-0 animate-[fadeSlideUp_0.6s_cubic-bezier(0.16,1,0.3,1)_forwards] delay-100 pb-10">
-      
-      <!-- Imagen 1: Ratio 3/4 -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Fade Texturizado')">
-        <div class="w-full aspect-[3/4] bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
-           <!-- Ícono para simular la imagen fotográfica -->
-           <i class="ph-fill ph-camera text-4xl mb-2 opacity-50"></i>
-        </div>
-        <!-- Capa de oscurecimiento al click -->
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <!-- Badge -->
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">FADE TEXTURIZADO</span>
-        </div>
-      </div>
-
-      <!-- Imagen 2: Ratio 4/5 -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Pompadour Moderno')">
-        <div class="w-full aspect-[4/5] bg-gradient-to-tr from-gray-50 to-gray-200 flex flex-col items-center justify-center text-gray-300">
-           <i class="ph-fill ph-image text-4xl mb-2 opacity-30"></i>
-        </div>
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">POMPADOUR</span>
-        </div>
-      </div>
-
-      <!-- Imagen 3: Ratio 1/1 (Square) -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Buzz Cut / Rapado')">
-        <div class="w-full aspect-square bg-gradient-to-bl from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
-           <i class="ph-fill ph-scissors text-4xl mb-2 opacity-40"></i>
-        </div>
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">BUZZ CUT</span>
-        </div>
-      </div>
-
-      <!-- Imagen 4: Ratio 2/3 -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Mullet Texturizado')">
-        <div class="w-full aspect-[2/3] bg-gradient-to-br from-gray-200 via-gray-100 to-gray-50 flex flex-col items-center justify-center text-gray-300">
-           <i class="ph-fill ph-star text-4xl mb-2 opacity-30"></i>
-        </div>
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">MULLET CLASSIC</span>
-        </div>
-      </div>
-
-      <!-- Imagen 5: Ratio 1/1 (Square) -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'French Crop Clásico')">
-        <div class="w-full aspect-square bg-gradient-to-t from-gray-200 to-gray-100 flex flex-col items-center justify-center text-gray-300">
-           <i class="ph-fill ph-camera text-4xl mb-2 opacity-50"></i>
-        </div>
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">FRENCH CROP</span>
-        </div>
-      </div>
-
-      <!-- Imagen 6: Ratio 3/4 -->
-      <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100" onclick="openStyleCard(this, 'Low Fade Clásico')">
-        <div class="w-full aspect-[3/4] bg-gradient-to-b from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
-           <i class="ph-fill ph-aperture text-4xl mb-2 opacity-40"></i>
-        </div>
-        <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
-        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
-           <span class="tracking-wide uppercase">LOW FADE</span>
-        </div>
-      </div>
-
+    <div id="lookbookGrid" class="columns-2 gap-4 space-y-4 opacity-0 animate-[fadeSlideUp_0.6s_cubic-bezier(0.16,1,0.3,1)_forwards] delay-100 pb-10">
+      <!-- Skeletons mientras carga Firestore -->
+      <div class="break-inside-avoid rounded-2xl aspect-[3/4] bg-gray-100 animate-pulse mb-4"></div>
+      <div class="break-inside-avoid rounded-2xl aspect-[4/5] bg-gray-100 animate-pulse mb-4"></div>
+      <div class="break-inside-avoid rounded-2xl aspect-square bg-gray-100 animate-pulse mb-4"></div>
+      <div class="break-inside-avoid rounded-2xl aspect-[3/4] bg-gray-100 animate-pulse mb-4"></div>
     </div>
   </main>
 
@@ -238,6 +178,50 @@
   </div>
 
   <script>
+    // ── Cargar fotos desde Firestore ─────────────────────────────
+    // Alterna aspect ratios para el efecto masonry natural
+    const RATIOS = ['aspect-[3/4]', 'aspect-[4/5]', 'aspect-square', 'aspect-[2/3]', 'aspect-[3/4]', 'aspect-[4/5]'];
+
+    db.collection('lookbook').orderBy('order', 'asc').onSnapshot(snap => {
+      const grid = document.getElementById('lookbookGrid');
+      if (!grid) return;
+
+      if (snap.empty) {
+        // Sin fotos: mostrar los placeholders originales como fallback estético
+        grid.innerHTML = `
+          <div class="break-inside-avoid relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 mb-4">
+            <div class="w-full aspect-[3/4] bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+              <i class="ph-fill ph-camera text-4xl mb-2 opacity-50"></i>
+              <span class="text-xs text-gray-400 font-medium">Pronto habrá fotos</span>
+            </div>
+          </div>
+          <div class="break-inside-avoid relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 mb-4">
+            <div class="w-full aspect-[4/5] bg-gradient-to-tr from-gray-50 to-gray-200 flex flex-col items-center justify-center text-gray-300">
+              <i class="ph-fill ph-scissors text-4xl mb-2 opacity-40"></i>
+            </div>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = snap.docs.map((doc, i) => {
+        const { url } = doc.data();
+        const ratio   = RATIOS[i % RATIOS.length];
+        return `
+          <div class="break-inside-avoid relative rounded-2xl overflow-hidden group active:scale-[0.97] transition-transform cursor-pointer shadow-sm border border-gray-100 mb-4"
+               onclick="openStyleCard(this, 'Corte Ferraza')">
+            <div class="w-full ${ratio} bg-gray-100 overflow-hidden">
+              <img src="${url}" loading="lazy"
+                   class="w-full h-full object-cover"
+                   onerror="this.parentElement.parentElement.remove()">
+            </div>
+            <div class="style-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300 z-10"></div>
+            <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur text-brand-text text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white z-20">
+              <span class="tracking-wide uppercase">Ferraza</span>
+            </div>
+          </div>`;
+      }).join('');
+    });
+
     let currentActiveCard = null;
 
     // Abrir el Bottom Sheet

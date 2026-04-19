@@ -12,6 +12,14 @@
   <meta property="og:type" content="website">
   <meta name="robots" content="index, follow">
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ferraza">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -133,6 +141,13 @@
       <!-- PASO 1 -->
       <section id="step1" class="animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
         <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">¿Qué servicio buscas?</h2>
+        <!-- Skeleton visible mientras carga Firestore -->
+        <div id="servicesSkeleton" class="grid grid-cols-2 gap-4">
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+        </div>
         <div class="grid grid-cols-2 gap-4" id="servicesGrid">
         </div>
       </section>
@@ -266,7 +281,7 @@
     </main>
   </div>
 
-  <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent z-40">
+  <div class="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent z-40">
     <div class="max-w-md mx-auto">
       <button id="btnContinue" onclick="nextStep()"
         class="w-full bg-[#0a0a0d] border-2 border-neon text-neon text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 focus:outline-none hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:bg-brand-neon/5">
@@ -298,6 +313,8 @@
     const _ICONS = ['ph-scissors','ph-mask-happy','ph-user-focus','ph-magic-wand','ph-sparkle','ph-star'];
 
     function _renderServicesGrid(services) {
+      const skeleton = document.getElementById('servicesSkeleton');
+      if (skeleton) skeleton.style.display = 'none';
       const grid = document.getElementById('servicesGrid');
       grid.innerHTML = '';
       services.forEach((s, i) => {
@@ -483,7 +500,9 @@
       btn.querySelector('.icon-svg').classList.remove('drop-shadow-[0_0_5px_rgba(255,255,255,0.35)]');
       btn.querySelector('.icon-svg').classList.add('drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]', 'scale-110');
 
-      selectedServiceObj = DB.getServices().find(s => String(s.id) === String(id));
+      // Buscar primero en _fsServices (Firestore), fallback a localStorage
+      selectedServiceObj = _fsServices.find(s => String(s.id) === String(id))
+        || DB.getServices().find(s => String(s.id) === String(id));
     }
 
     function selectTime(btn, time) {

@@ -11,6 +11,14 @@
   <meta property="og:type" content="website">
   <meta name="robots" content="noindex, nofollow">
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ferraza">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -89,10 +97,10 @@
     <div id="panelLogin">
       <div class="space-y-4">
         <input type="email" id="loginEmail" placeholder="Correo electrónico" autocomplete="email"
-          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
+          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <div class="relative">
           <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password"
-            class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600 pr-14">
+            class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600 pr-14">
           <button onclick="togglePwd('loginPassword',this)" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
             <i class="ph ph-eye text-xl"></i>
           </button>
@@ -109,15 +117,15 @@
     <div id="panelRegister" class="hidden">
       <div class="space-y-4">
         <input type="text" id="regNombre" placeholder="Nombre completo" autocomplete="name"
-          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
+          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <input type="email" id="regEmail" placeholder="Correo electrónico" autocomplete="email"
-          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
+          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <input type="tel" id="regTelefono" placeholder="+56 9 1234 5678" autocomplete="tel"
           inputmode="numeric"
-          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
+          class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600">
         <div class="relative">
           <input type="password" id="regPassword" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password"
-            class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-sm font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600 pr-14">
+            class="w-full bg-brand-card border border-white/15 rounded-2xl px-5 py-4 text-brand-text text-base font-medium focus:outline-none focus:border-white/60 focus:shadow-[0_0_15px_rgba(255,255,255,0.12)] transition-all placeholder-gray-600 pr-14">
           <button onclick="togglePwd('regPassword',this)" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
             <i class="ph ph-eye text-xl"></i>
           </button>
