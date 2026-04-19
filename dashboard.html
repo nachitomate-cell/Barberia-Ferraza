@@ -342,19 +342,6 @@
   </div>
 
 <script>
-// ── Lookbook: fotos de ejemplo (reemplaza con URLs reales o Firestore Storage) ──
-const LOOKBOOK_PHOTOS = [
-  { url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80', alt: 'Fade clásico' },
-  { url: 'https://images.unsplash.com/photo-1599351431613-18ef1fdd27e1?w=400&q=80', alt: 'Corte moderno' },
-  { url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&q=80', alt: 'Barbero en acción' },
-  { url: 'https://images.unsplash.com/photo-1622296089863-eb7fc530daa8?w=400&q=80', alt: 'Corte + barba' },
-  { url: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&q=80', alt: 'Perfil lateral' },
-  { url: 'https://images.unsplash.com/photo-1512690459411-b9245aed614b?w=400&q=80', alt: 'Herramientas de barbero' },
-  { url: 'https://images.unsplash.com/photo-1595152772835-219674b2a163?w=400&q=80', alt: 'Corte estilo' },
-  { url: 'https://images.unsplash.com/photo-1541533848490-bc8115cd6522?w=400&q=80', alt: 'Detalle de corte' },
-  { url: 'https://images.unsplash.com/photo-1634302059461-381e81bd9f57?w=400&q=80', alt: 'Barba perfilada' },
-  { url: 'https://images.unsplash.com/photo-1560066984-138daaa7b455?w=400&q=80', alt: 'Ambiente barbería' },
-];
 
 // ─── Estado global ────────────────────────────────────────────
 let currentUser     = null;
@@ -363,6 +350,7 @@ let activeTab       = 'loyalty';
 let _premiosDynamic = [];      // premios cargados desde Firestore
 let _userUnsub      = null;    // cleanup onSnapshot del usuario
 let _premiosUnsub   = null;    // cleanup onSnapshot de premios
+let _lookbookUnsub  = null;    // cleanup onSnapshot del lookbook
 let _prevStamps     = null;    // para detectar incremento y lanzar confetti
 let _stampsSynced   = false;   // true después del primer snapshot (no dispara confetti en carga)
 
@@ -377,8 +365,9 @@ document.getElementById('shopNombreCard').textContent = SHOP.nombre;
 auth.onAuthStateChanged(async user => {
   if (!user) {
     // Limpiar suscripciones al cerrar sesión
-    if (_userUnsub)    { _userUnsub();    _userUnsub    = null; }
-    if (_premiosUnsub) { _premiosUnsub(); _premiosUnsub = null; }
+    if (_userUnsub)     { _userUnsub();     _userUnsub     = null; }
+    if (_premiosUnsub)  { _premiosUnsub();  _premiosUnsub  = null; }
+    if (_lookbookUnsub) { _lookbookUnsub(); _lookbookUnsub = null; }
     window.location.href = 'registro.html';
     return;
   }
@@ -585,20 +574,36 @@ function renderStamps(count) {
 function initLookbook() {
   const grid  = document.getElementById('lookbookGrid');
   const empty = document.getElementById('lookbookEmpty');
+  if (!grid) return;
 
-  if (LOOKBOOK_PHOTOS.length === 0) {
-    empty.classList.remove('hidden');
-    empty.classList.add('flex');
-    return;
-  }
+  // Skeletons mientras carga Firestore
+  grid.innerHTML = `
+    <div class="masonry-item rounded-2xl aspect-[3/4] bg-white/5 animate-pulse"></div>
+    <div class="masonry-item rounded-2xl aspect-[4/5] bg-white/5 animate-pulse"></div>
+    <div class="masonry-item rounded-2xl aspect-square bg-white/5 animate-pulse"></div>
+    <div class="masonry-item rounded-2xl aspect-[3/4] bg-white/5 animate-pulse"></div>`;
 
-  LOOKBOOK_PHOTOS.forEach(photo => {
-    const item = document.createElement('div');
-    item.className = 'masonry-item rounded-2xl overflow-hidden border border-white/8 bg-brand-card';
-    item.innerHTML = `<img src="${photo.url}" alt="${photo.alt || 'Corte Ferraza'}"
-      loading="lazy" class="w-full object-cover block" onerror="this.parentElement.remove()">`;
-    grid.appendChild(item);
-  });
+  if (_lookbookUnsub) { _lookbookUnsub(); _lookbookUnsub = null; }
+
+  _lookbookUnsub = db.collection('lookbook').orderBy('order', 'asc').onSnapshot(snap => {
+    if (snap.empty) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      empty.classList.add('flex');
+      return;
+    }
+    empty.classList.add('hidden');
+    empty.classList.remove('flex');
+    grid.innerHTML = snap.docs.map(doc => {
+      const { url } = doc.data();
+      return `
+        <div class="masonry-item rounded-2xl overflow-hidden border border-white/8 bg-brand-card">
+          <img src="${url}" loading="lazy"
+               class="w-full object-cover block"
+               onerror="this.parentElement.remove()">
+        </div>`;
+    }).join('');
+  }, err => console.error('[Lookbook] onSnapshot:', err));
 }
 
 // ─── Tab Navigation ───────────────────────────────────────────
