@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050505">
+  <title>Mi Agenda | Fabián Barraza</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="config.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebaseUtils.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { bg: '#050505', text: '#f8fafc', accent: '#ffffff', card: '#111115', border: '#1f2937' }
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          keyframes: {
+            fadeSlideUp: {
+              '0%':   { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' }
+            }
+          },
+          animation: { 'fade-up': 'fadeSlideUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards' }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { background-color:#050505; color:#f8fafc; overscroll-behavior-y:none; -webkit-tap-highlight-color:transparent; }
+    .text-neon { color:#fff; text-shadow:0 0 5px rgba(255,255,255,0.4),0 0 10px rgba(255,255,255,0.2); }
+    .border-neon { border-color:#fff; box-shadow:0 0 6px rgba(255,255,255,0.2),inset 0 0 6px rgba(255,255,255,0.05); }
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+    .nav-tab { transition: all 0.2s; }
+    .nav-tab.active .nav-icon { color: #ffffff; filter: drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+    .nav-tab.active .nav-label { color: #ffffff; }
+    .nav-tab .nav-icon  { color: #6b7280; }
+    .nav-tab .nav-label { color: #6b7280; }
+    /* Logo placeholder */
+    .logo-initials {
+      width:2.25rem; height:2.25rem; border-radius:50%;
+      background:#000; border:1px solid #D4AF37;
+      box-shadow:0 0 10px rgba(212,175,55,0.25);
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.7rem; font-weight:700; color:#D4AF37; letter-spacing:0.05em;
+    }
+  </style>
+</head>
+
+<body class="font-sans antialiased min-h-screen">
+
+  <!-- Auth Guard -->
+  <div id="authGuard" class="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50">
+    <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+    <span class="text-xs text-gray-500">Cargando...</span>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <div class="max-w-md mx-auto relative pb-44">
+
+    <!-- HEADER -->
+    <header class="px-6 pt-8 pb-5 flex items-center justify-between sticky top-0 bg-[#050505]/95 backdrop-blur-md z-30 border-b border-white/5">
+      <!-- Logo -->
+      <div id="headerLogo">
+        <img id="shopLogoImg" src="" alt=""
+          class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.15)]"
+          onerror="this.style.display='none';document.getElementById('shopLogoFB').style.display='flex'">
+        <div id="shopLogoFB" class="logo-initials" style="display:none">FB</div>
+      </div>
+
+      <div class="text-center">
+        <h1 id="shopTitle" class="text-base font-bold text-neon tracking-tight leading-none"></h1>
+        <p id="headerGreeting" class="text-[11px] text-gray-500 mt-0.5">Cargando...</p>
+      </div>
+
+      <div id="avatarContainer" class="w-9 h-9 rounded-full bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
+        <i class="ph-fill ph-user text-gray-500 text-lg"></i>
+      </div>
+    </header>
+
+    <!-- ═══════ PESTAÑA 1: MIS CITAS ═══════ -->
+    <section id="tabCitas" class="tab-panel px-5 pt-6 animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+
+      <!-- Hero CTA -->
+      <div class="mb-8 text-center">
+        <a href="index.html"
+          class="inline-flex items-center gap-3 bg-white text-[#050505] font-bold px-8 py-4 rounded-[2rem] shadow-[0_0_30px_rgba(255,255,255,0.35),0_4px_20px_rgba(0,0,0,0.6)] active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] text-base">
+          <i class="ph-bold ph-calendar-plus text-lg"></i>
+          Agendar Hora
+        </a>
+      </div>
+
+      <!-- Mis Citas -->
+      <div class="mb-3 flex items-center justify-between px-1">
+        <h2 class="text-xs font-bold text-white/40 uppercase tracking-widest">Mis Citas</h2>
+        <button onclick="cargarMisCitas()" class="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1">
+          <i class="ph ph-arrow-clockwise text-sm"></i> Actualizar
+        </button>
+      </div>
+      <div id="citasList" class="space-y-3">
+        <div class="flex justify-center py-10">
+          <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ PESTAÑA 2: MI PERFIL ═══════ -->
+    <section id="tabProfile" class="tab-panel hidden px-5 pt-6 animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+
+      <!-- Avatar + datos -->
+      <div class="flex flex-col items-center mb-8">
+        <div id="profileAvatar" class="w-20 h-20 rounded-full bg-brand-card border-2 border-neon shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center overflow-hidden mb-4">
+          <i class="ph-fill ph-user text-4xl text-gray-500"></i>
+        </div>
+        <h2 id="profileName" class="text-xl font-bold text-neon tracking-tight">—</h2>
+        <p id="profileEmail" class="text-sm text-gray-500 mt-0.5">—</p>
+      </div>
+
+      <!-- Datos editables -->
+      <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Mi Cuenta</h3>
+      <div class="space-y-3 mb-5">
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Nombre</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-user text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editNombre" type="text" placeholder="Tu nombre"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
+          </div>
+        </div>
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Correo</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-envelope text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editEmail" type="email" placeholder="tu@correo.com"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
+          </div>
+        </div>
+        <div class="bg-brand-card rounded-2xl border border-white/8 px-5 py-3">
+          <label class="text-[10px] text-gray-600 font-bold uppercase tracking-widest block mb-1">Teléfono</label>
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-phone text-gray-500 text-base flex-shrink-0"></i>
+            <input id="editTelefono" type="tel" placeholder="+56 9 XXXX XXXX" inputmode="numeric"
+              class="flex-1 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder-gray-600 min-w-0">
+          </div>
+        </div>
+      </div>
+      <p id="profileSaveMsg" class="hidden text-xs text-center text-neon mb-3">✓ Datos guardados correctamente</p>
+      <button onclick="guardarPerfil()"
+        class="w-full bg-white/5 border border-neon text-neon font-bold py-3.5 rounded-2xl text-sm active:scale-[0.99] transition-all hover:bg-white/10 mb-6 flex items-center justify-center gap-2">
+        <i class="ph-bold ph-floppy-disk text-base"></i> Guardar cambios
+      </button>
+
+      <!-- Sesión -->
+      <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Sesión</h3>
+      <div class="space-y-3">
+        <button onclick="signOut()"
+          class="w-full flex items-center justify-center gap-2 bg-brand-card border border-white/10 text-gray-300 font-semibold py-4 rounded-2xl active:scale-[0.99] transition-all hover:border-white/25 hover:text-white text-sm">
+          <i class="ph-bold ph-sign-out text-base"></i> Cerrar Sesión
+        </button>
+        <button onclick="confirmDeleteAccount()"
+          class="w-full flex items-center justify-center gap-2 bg-red-950/30 border border-red-500/25 text-red-400 font-semibold py-4 rounded-2xl active:scale-[0.99] transition-all hover:border-red-400/50 hover:bg-red-950/50 text-sm">
+          <i class="ph-bold ph-trash text-base"></i> Eliminar Cuenta
+        </button>
+      </div>
+      <p class="text-[10px] text-gray-700 text-center mt-6 leading-relaxed">
+        Al eliminar tu cuenta se borran todos tus datos.<br>Esta acción es irreversible.
+      </p>
+    </section>
+
+  </div><!-- /max-w-md -->
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0d]/95 backdrop-blur-xl border-t border-white/8" style="padding-bottom: env(safe-area-inset-bottom);">
+    <div class="max-w-md mx-auto flex items-stretch">
+
+      <button class="nav-tab active flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"
+        onclick="switchTab('citas')" id="navCitas">
+        <i class="nav-icon ph-fill ph-calendar-check text-2xl transition-all"></i>
+        <span class="nav-label text-[10px] font-bold uppercase tracking-widest transition-all">Mis Citas</span>
+      </button>
+
+      <button class="nav-tab flex-1 flex flex-col items-center justify-center gap-1 py-3.5 px-2"
+        onclick="switchTab('profile')" id="navProfile">
+        <i class="nav-icon ph-fill ph-user-circle text-2xl transition-all"></i>
+        <span class="nav-label text-[10px] font-bold uppercase tracking-widest transition-all">Mi Perfil</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- Modal confirmar eliminar cuenta -->
+  <div id="deleteModal" class="hidden fixed inset-0 bg-[#050505]/85 backdrop-blur-sm z-50 flex items-end justify-center px-5 pb-8">
+    <div class="w-full max-w-sm bg-[#111115] border border-white/10 rounded-3xl p-6 animate-[fadeSlideUp_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+      <div class="w-12 h-12 rounded-full bg-red-950/50 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
+        <i class="ph-fill ph-warning text-red-400 text-2xl"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white text-center mb-2">¿Eliminar tu cuenta?</h3>
+      <p class="text-sm text-gray-400 text-center leading-relaxed mb-6">
+        Se borrarán todos tus datos.<br>Esta acción <strong class="text-red-400">no se puede deshacer</strong>.
+      </p>
+      <div class="space-y-3">
+        <button onclick="deleteAccount()"
+          class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm">
+          Sí, eliminar mi cuenta
+        </button>
+        <button onclick="closeDeleteModal()"
+          class="w-full bg-white/5 border border-white/10 text-gray-400 font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm hover:bg-white/10">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ─── Estado global ────────────────────────────────────────────
+let currentUser  = null;
+let activeTab    = 'citas';
+let _userUnsub   = null;
+
+// ─── Aplicar Config ───────────────────────────────────────────
+document.title = `Mi Agenda | ${SHOP.nombre}`;
+document.getElementById('shopTitle').textContent = SHOP.nombre;
+
+// Logo
+const logoImg = document.getElementById('shopLogoImg');
+if (SHOP.logo) { logoImg.src = SHOP.logo; logoImg.alt = SHOP.nombre; }
+else { logoImg.style.display = 'none'; document.getElementById('shopLogoFB').style.display = 'flex'; }
+
+// ─── Auth Guard ───────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    if (_userUnsub) { _userUnsub(); _userUnsub = null; }
+    window.location.href = 'registro.html';
+    return;
+  }
+  currentUser = user;
+  document.getElementById('authGuard').style.display = 'none';
+  subscribeUserData(user);
+  cargarMisCitas();
+});
+
+// ─── Crear documento si no existe ────────────────────────────
+async function ensureUserDoc(user) {
+  const ref  = db.collection('users').doc(user.uid);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    await ref.set({
+      nombre:   user.displayName || '',
+      email:    user.email || '',
+      telefono: '',
+      photoURL: user.photoURL || null,
+      stamps:   0,
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  if (user.photoURL && snap.exists && snap.data().photoURL !== user.photoURL) {
+    await ref.update({ photoURL: user.photoURL });
+  }
+  return snap.exists ? snap.data() : null;
+}
+
+// ─── Cargar datos del usuario ─────────────────────────────────
+async function subscribeUserData(user) {
+  await ensureUserDoc(user);
+  if (_userUnsub) { _userUnsub(); _userUnsub = null; }
+
+  _userUnsub = db.collection('users').doc(user.uid).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    const nombre = data.nombre || user.displayName || 'Cliente';
+
+    document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
+
+    if (user.photoURL) {
+      document.getElementById('avatarContainer').innerHTML =
+        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+      document.getElementById('profileAvatar').innerHTML =
+        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+    }
+
+    document.getElementById('profileName').textContent  = nombre;
+    document.getElementById('profileEmail').textContent = user.email || '';
+
+    const nombreInput = document.getElementById('editNombre');
+    const telInput    = document.getElementById('editTelefono');
+    if (document.activeElement !== nombreInput) nombreInput.value = nombre;
+    if (document.activeElement !== telInput)    telInput.value    = data.telefono || '';
+    document.getElementById('editEmail').value = user.email || '';
+
+  }, err => console.error('[Dashboard] onSnapshot usuario:', err));
+}
+
+// ─── Cargar Mis Citas ─────────────────────────────────────────
+async function cargarMisCitas() {
+  if (!currentUser) return;
+  const listEl = document.getElementById('citasList');
+  listEl.innerHTML = `<div class="flex justify-center py-8">
+    <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+  </div>`;
+
+  try {
+    // Buscar por email del usuario logueado
+    const snap = await db.collection('citas')
+      .where('clienteEmail', '==', currentUser.email)
+      .orderBy('fecha', 'desc')
+      .limit(20)
+      .get();
+
+    if (snap.empty) {
+      listEl.innerHTML = `
+        <div class="flex flex-col items-center py-10 text-center">
+          <i class="ph ph-calendar-x text-4xl text-white/10 mb-3"></i>
+          <p class="text-sm text-gray-600 font-medium">Aún no tienes citas registradas.</p>
+          <p class="text-xs text-gray-700 mt-1">Agenda tu primera hora arriba.</p>
+        </div>`;
+      return;
+    }
+
+    const hoy = new Date().toISOString().slice(0, 10);
+    const citas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    listEl.innerHTML = citas.map(c => {
+      const esFutura  = c.fecha >= hoy;
+      const estadoKey = c.estado || 'Confirmado';
+      const estadoColor = estadoKey === 'Completada' ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30'
+        : estadoKey === 'Cancelada' ? 'text-red-400 bg-red-400/10 border-red-400/30'
+        : estadoKey === 'No Asistió' ? 'text-gray-500 bg-gray-500/10 border-gray-500/30'
+        : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30';
+
+      return `
+        <div class="bg-brand-card border border-white/8 rounded-2xl p-4">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <p class="text-sm font-bold text-white">${c.servicioNombre || '—'}</p>
+              <p class="text-xs text-gray-500 mt-0.5">${c.barbero || SHOP.barberos[0]?.nombre || ''}</p>
+            </div>
+            <span class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${estadoColor}">
+              ${estadoKey}
+            </span>
+          </div>
+          <div class="flex items-center gap-4 text-xs text-gray-500">
+            <span class="flex items-center gap-1">
+              <i class="ph ph-calendar-blank"></i>${c.fecha}
+            </span>
+            <span class="flex items-center gap-1">
+              <i class="ph ph-clock"></i>${c.hora}
+            </span>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch(e) {
+    console.error('[Dashboard] cargarMisCitas:', e);
+    listEl.innerHTML = `
+      <div class="flex flex-col items-center py-8 text-center">
+        <i class="ph ph-warning text-2xl text-red-400/50 mb-2"></i>
+        <p class="text-sm text-gray-600">No se pudieron cargar tus citas.</p>
+        <button onclick="cargarMisCitas()" class="text-xs text-white/40 hover:text-white mt-2 underline">Reintentar</button>
+      </div>`;
+  }
+}
+
+// ─── Tab Navigation ───────────────────────────────────────────
+function switchTab(tab) {
+  if (tab === activeTab) return;
+  activeTab = tab;
+
+  const panels = { citas: 'tabCitas', profile: 'tabProfile' };
+  const navBtns = { citas: 'navCitas', profile: 'navProfile' };
+
+  Object.values(panels).forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('hidden');
+    el.classList.remove('animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]');
+  });
+  Object.values(navBtns).forEach(id => document.getElementById(id).classList.remove('active'));
+
+  const activePanel = document.getElementById(panels[tab]);
+  activePanel.classList.remove('hidden');
+  void activePanel.offsetWidth;
+  activePanel.classList.add('animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]');
+  document.getElementById(navBtns[tab]).classList.add('active');
+
+  if (tab === 'citas') cargarMisCitas();
+}
+
+// ─── Prefijo +56 automático ───────────────────────────────────
+(function initPhonePrefix() {
+  const PREFIX = '+56 9 ';
+  const input = document.getElementById('editTelefono');
+  if (!input) return;
+  input.addEventListener('focus', () => { if (!input.value.startsWith('+56')) input.value = PREFIX; });
+  input.addEventListener('input', () => { if (!input.value.startsWith('+56')) input.value = PREFIX; });
+  input.addEventListener('keydown', e => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && input.selectionStart <= PREFIX.length) e.preventDefault();
+  });
+})();
+
+function validatePhone(value) {
+  return /^\+56\s?9\s?\d{4}\s?\d{4}$/.test(value.trim());
+}
+
+// ─── Guardar perfil ───────────────────────────────────────────
+async function guardarPerfil() {
+  if (!currentUser) return;
+  const nombre   = document.getElementById('editNombre').value.trim();
+  const email    = document.getElementById('editEmail').value.trim();
+  const telefono = document.getElementById('editTelefono').value.trim();
+
+  if (!nombre) return alert('El nombre no puede estar vacío.');
+  if (telefono && !validatePhone(telefono))
+    return alert('Ingresa un teléfono válido. Debe comenzar con +56 9 seguido de 8 dígitos.');
+
+  try {
+    await db.collection('users').doc(currentUser.uid).update({ nombre, email, telefono });
+    await currentUser.updateProfile({ displayName: nombre });
+    if (email && email !== currentUser.email) await currentUser.updateEmail(email);
+
+    document.getElementById('profileName').textContent  = nombre;
+    document.getElementById('profileEmail').textContent = email;
+    document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
+
+    const msg = document.getElementById('profileSaveMsg');
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 3000);
+  } catch (e) {
+    if (e.code === 'auth/requires-recent-login') alert('Para cambiar el correo debes cerrar sesión e ingresar de nuevo.');
+    else alert('Error al guardar: ' + e.message);
+  }
+}
+
+// ─── Auth ─────────────────────────────────────────────────────
+async function signOut() {
+  await auth.signOut();
+  window.location.href = 'registro.html';
+}
+
+function confirmDeleteAccount() { document.getElementById('deleteModal').classList.remove('hidden'); }
+function closeDeleteModal()     { document.getElementById('deleteModal').classList.add('hidden'); }
+
+async function deleteAccount() {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).delete();
+    await currentUser.delete();
+    window.location.href = 'index.html';
+  } catch (err) {
+    if (err.code === 'auth/requires-recent-login') {
+      closeDeleteModal();
+      alert('Por seguridad, cierra sesión e ingresa de nuevo antes de eliminar tu cuenta.');
+    } else {
+      console.error(err);
+      alert('Error al eliminar la cuenta. Intenta de nuevo.');
+    }
+  }
+}
+</script>
+</body>
+</html>

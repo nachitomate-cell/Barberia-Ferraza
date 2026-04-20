@@ -1,0 +1,16 @@
+{
+  "name": "Fabián Barraza",
+  "short_name": "Fabián",
+  "description": "Agenda tu hora con Fabián Barraza, tu barbero de confianza.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/logo-fb.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
