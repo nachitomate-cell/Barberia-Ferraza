@@ -149,6 +149,9 @@
       #selloToast.show { transform: translateY(0); }
     }
 
+    /* Garantiza que .hidden siempre oculte, aunque otra clase defina display */
+    .hidden { display: none !important; }
+
     /* ── MODAL BOTTOM SHEET (mobile) ─────────────────────── */
     .modal-sheet {
       display: flex;
