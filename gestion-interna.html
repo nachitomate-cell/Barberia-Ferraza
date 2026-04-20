@@ -1536,8 +1536,8 @@ function loadServicesAdmin() {
         <p class="text-xs text-gray-400 mt-0.5">$${s.precio.toLocaleString('es-CL')} · ${s.duracion} min</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <button onclick="abrirEditar(${s.id})" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 hover:bg-blue-500/20 transition-colors"><i class="ph-fill ph-pencil-simple text-base"></i></button>
-        <button onclick="borrarServ(${s.id})"  class="p-3 rounded-xl bg-red-500/10  border border-red-500/25  text-red-400  hover:bg-red-500/20  transition-colors"><i class="ph-fill ph-trash text-base"></i></button>
+        <button onclick="abrirEditar('${s.id}')" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 hover:bg-blue-500/20 transition-colors"><i class="ph-fill ph-pencil-simple text-base"></i></button>
+        <button onclick="borrarServ('${s.id}')"  class="p-3 rounded-xl bg-red-500/10  border border-red-500/25  text-red-400  hover:bg-red-500/20  transition-colors"><i class="ph-fill ph-trash text-base"></i></button>
       </div>`;
 
     card.addEventListener('dragstart', e => { dragSrcEl = card; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
