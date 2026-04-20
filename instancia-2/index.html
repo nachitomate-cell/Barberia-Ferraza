@@ -392,8 +392,7 @@
     }
 
     function selectService(btn) {
-      const rawId = btn.getAttribute('data-service-id');
-      const id = parseInt(rawId) || rawId;
+      const id = btn.getAttribute('data-service-id');
       document.querySelectorAll('.service-option').forEach(el => {
         el.classList.replace('border-neon','border-brand-accent/20');
         el.classList.remove('bg-brand-neon/10','scale-105','shadow-[0_0_20px_rgba(255,255,255,0.2)]','border-2');
