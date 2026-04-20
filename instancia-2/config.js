@@ -1,9 +1,9 @@
-// config.js — Configuración de Fabián Barraza
+// config.js — Configuración de Nicolas Fabian
 // Edita este archivo para personalizar la app.
 
 const SHOP = {
-  nombre:      "Fabián Barraza",
-  nombreCorto: "Fabián",
+  nombre:      "Nicolas Fabian",
+  nombreCorto: "Nicolas",
   slogan:      "Tu barbero de confianza",
   logo:        "logo-fb.svg",         // iniciales FB como placeholder
   direccion:   "",
@@ -14,7 +14,7 @@ const SHOP = {
   barberos: [
     {
       id:           1,
-      nombre:       "Fabián Barraza",
+      nombre:       "Nicolas Fabian",
       especialidad: "Barbero profesional",
       foto:         "foto-barbero.jpg",
       disponible:   true

@@ -4,7 +4,7 @@
 const SHOP = {
   nombre:      "Barbería Ferraza",
   nombreCorto: "Ferraza",
-  slogan:      "Ferraza es tu casa",
+  slogan:      "El cambio comienza por ti",
   logo:        "logo.jpg",
   direccion:   "Av. Libertad 63 / Local 28",
   horario:     "Lun a Sáb 10:00 – 20:00 hrs.",

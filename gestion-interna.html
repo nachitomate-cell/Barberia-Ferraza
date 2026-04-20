@@ -605,7 +605,7 @@
         <label id="lookbookDropzone"
           class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-admin-accent/40 hover:bg-white/5 transition-all active:bg-white/10">
           <i class="ph ph-images text-3xl text-white/20 mb-2"></i>
-          <span class="text-white/40 text-sm font-medium">Toca para subir fotos</span>
+          <span class="text-white/40 text-sm font-medium">Toca para subir fotos · máx. 8 en total</span>
           <span class="text-white/25 text-xs mt-1">JPG, PNG — máx. 5MB por foto</span>
           <input type="file" id="lookbookFileInput" accept="image/*" multiple class="hidden">
         </label>
@@ -2416,6 +2416,21 @@ function initLookbookAdmin() {
       files = files.filter(f => f.size <= MAX_SIZE);
     }
     if (!files.length) return;
+
+    // Validar límite de 8 fotos
+    const snapActual = await db.collection('lookbook').get();
+    const totalActual = snapActual.size;
+    const espacioDisponible = 8 - totalActual;
+
+    if (espacioDisponible <= 0) {
+      showMiniToast('Límite de 8 fotos alcanzado. Elimina una para subir más.');
+      return;
+    }
+
+    if (files.length > espacioDisponible) {
+      showMiniToast('Solo puedes subir ' + espacioDisponible + ' foto(s) más. Se subirán las primeras.');
+      files = files.slice(0, espacioDisponible);
+    }
 
     const progress = document.getElementById('lookbookProgress');
     const bar      = document.getElementById('lookbookProgressBar');
