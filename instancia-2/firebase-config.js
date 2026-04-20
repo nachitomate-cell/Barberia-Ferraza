@@ -3,12 +3,13 @@
 // Pasos: Firebase Console → Tu proyecto → Configuración → Aplicación web
 
 const firebaseConfig = {
-  apiKey:            "TU_API_KEY",
-  authDomain:        "TU_PROJECT_ID.firebaseapp.com",
-  projectId:         "TU_PROJECT_ID",
-  storageBucket:     "TU_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId:             "TU_APP_ID"
+  apiKey: "AIzaSyB3nCbWV0cY0nRuw4aOEK7y-NZwD0EwgaM",
+  authDomain: "fabian-barraza.firebaseapp.com",
+  projectId: "fabian-barraza",
+  storageBucket: "fabian-barraza.firebasestorage.app",
+  messagingSenderId: "460376713559",
+  appId: "1:460376713559:web:7a461668b17d8698507612",
+  measurementId: "G-6C9PKGSMF9"
 };
 
 if (!firebase.apps.length) {
