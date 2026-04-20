@@ -280,6 +280,8 @@
         _fsConfig   = DB.getSettings();
         _fsServices = DB.getServices();
       }
+      // Exponer globalmente para que selectService() acceda desde onclick inline
+      window._fsServices = _fsServices;
       await precargarBloqueos();
       _renderServicesGrid(_fsServices);
     }
@@ -376,7 +378,7 @@
       btn.querySelector('.icon-bg').classList.replace('border-brand-accent/20','border-brand-neon');
       btn.querySelector('.icon-svg').classList.remove('drop-shadow-[0_0_5px_rgba(255,255,255,0.35)]');
       btn.querySelector('.icon-svg').classList.add('drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]','scale-110');
-      selectedServiceObj = _fsServices.find(s => String(s.id) === String(id)) || DB.getServices().find(s => String(s.id) === String(id));
+      selectedServiceObj = (window._fsServices || _fsServices || []).find(s => String(s.id) === String(id)) || DB.getServices().find(s => String(s.id) === String(id));
     }
 
     function selectTime(btn, time) {

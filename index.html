@@ -330,6 +330,9 @@
         _fsConfig   = DB.getSettings();
         _fsServices = DB.getServices();
       }
+      // Exponer globalmente para que selectService() pueda acceder
+      // desde atributos onclick (que ejecutan en scope global, no en closure)
+      window._fsServices = _fsServices;
       await precargarBloqueos();
       _renderServicesGrid(_fsServices);
     }
@@ -468,8 +471,8 @@
       btn.querySelector('.icon-svg').classList.remove('drop-shadow-[0_0_5px_rgba(255,255,255,0.35)]');
       btn.querySelector('.icon-svg').classList.add('drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]', 'scale-110');
 
-      // Buscar primero en _fsServices (Firestore), fallback a localStorage
-      selectedServiceObj = _fsServices.find(s => String(s.id) === String(id))
+      // Buscar en la lista global (garantizada en scope de onclick)
+      selectedServiceObj = (window._fsServices || _fsServices || []).find(s => String(s.id) === String(id))
         || DB.getServices().find(s => String(s.id) === String(id));
     }
 
