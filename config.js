@@ -12,6 +12,6 @@ const SHOP = {
   club:        "Club Ferraza",
 
   barberos: [
-    { nombre: "Fabian Barraza", foto: "Fabian.png", disponible: true }
+    { nombre: "Nicolas Fabian", foto: "Fabian.png", disponible: true }
   ]
 };
