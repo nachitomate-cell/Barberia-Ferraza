@@ -1104,7 +1104,7 @@ async function saveManualBooking() {
 //  AUTH GATE
 // ══════════════════════════════════════════════════════════════
 let _adminInitialized = false;
-const ADMIN_EMAILS = ['barrazanicolasfabian@gmail.com'];
+const ADMIN_EMAILS = ['barrazanicolasfabian@gmail.com', 'ignaciiio.mate@gmail.com'];
 
 firebase.auth().onAuthStateChanged(async (user) => {
   if (user && ADMIN_EMAILS.includes(user.email)) {
