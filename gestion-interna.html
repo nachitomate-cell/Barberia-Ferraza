@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="/output.css" rel="stylesheet">
   <script src="config.js"></script>
   <script src="db.js"></script>
   <!-- Después de firebase-config.js se carga firebaseUtils -->
@@ -24,17 +24,6 @@
   <script src="firebase-config.js"></script>
   <script src="firebaseUtils.js"></script>
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: { admin: { bg:'#111827', card:'#1F2937', accent:'#34D399', border:'#374151' } },
-          fontFamily: { sans: ['Inter','sans-serif'] }
-        }
-      }
-    }
-  </script>
 
   <style>
     body { background-color:#111827; color:#F9FAFB; overscroll-behavior-y:none; }

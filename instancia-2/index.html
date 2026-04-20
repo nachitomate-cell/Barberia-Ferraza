@@ -18,13 +18,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fabián">
-  <link rel="apple-touch-icon" href="/logo-fb.svg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="/output.css" rel="stylesheet">
 
   <script src="config.js"></script>
   <script src="db.js"></script>
@@ -36,40 +36,6 @@
   <script src="firebase-config.js"></script>
   <script src="firebaseUtils.js"></script>
 
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              bg: '#050505',
-              text: '#f8fafc',
-              accent: '#ffffff',
-              accentDark: '#e2e8f0',
-              card: '#111115',
-              border: '#1f2937',
-              neon: '#ffffff'
-            }
-          },
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          animation: {
-            'fade-slide-up': 'fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'neon-pulse': 'neonPulse 3s infinite',
-          },
-          keyframes: {
-            fadeSlideUp: {
-              '0%': { opacity: '0', transform: 'translateY(24px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            neonPulse: {
-              '0%, 100%': { boxShadow: '0 0 5px rgba(255,255,255,0.1)' },
-              '50%': { boxShadow: '0 0 15px rgba(255,255,255,0.3)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
 
   <style>
     body {
@@ -393,6 +359,10 @@
 
     function selectService(btn) {
       const id = btn.getAttribute('data-service-id');
+      console.log('ID recibido:', id, typeof id);
+      console.log('_fsServices:', window._fsServices?.length);
+      const _found = (window._fsServices || []).find(s => String(s.id) === String(id));
+      console.log('Encontrado:', _found);
       document.querySelectorAll('.service-option').forEach(el => {
         el.classList.replace('border-neon','border-brand-accent/20');
         el.classList.remove('bg-brand-neon/10','scale-105','shadow-[0_0_20px_rgba(255,255,255,0.2)]','border-2');
