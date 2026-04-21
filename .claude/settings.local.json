@@ -3,7 +3,16 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "Bash(winget upgrade:*)"
+      "Bash(winget upgrade:*)",
+      "Bash(ls:*)",
+      "Bash(grep \"\\\\.js$\")",
+      "Bash(npx tailwindcss:*)",
+      "Bash(./node_modules/.bin/tailwindcss -i input.css -o output.css --minify)",
+      "Bash(\"C:/Users/56983/OneDrive/Desktop/Barberos/Ferraza/Barberia-Ferraza/node_modules/.bin/tailwindcss\" --version)",
+      "Bash(node_modules/.bin/tailwindcss -i input.css -o output.css --minify)",
+      "Bash(node_modules/.bin/tailwindcss -c tailwind-lookbook.config.js -i input.css -o output-lookbook.css --minify)",
+      "Bash(vercel --version)",
+      "Bash(vercel --prod --force)"
     ]
   }
 }

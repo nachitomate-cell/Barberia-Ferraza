@@ -212,6 +212,8 @@ const FDB = (() => {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
 
+  // Legacy: el flujo publico multi-tenant usa BookingService.createBooking().
+  // Se mantiene temporalmente para compatibilidad con vistas antiguas.
   async function addCita(cita) {
     const ref = await db.collection(COL.CITAS).add({
       fecha:            cita.fecha            || '',
@@ -328,6 +330,8 @@ const FDB = (() => {
      DISPONIBILIDAD (reemplaza DB.getAvailableHours — ahora async)
      Filtra citas ocupadas, colación y bloqueos manuales.
      ────────────────────────────────────────────────────────────── */
+  // Legacy: el flujo publico multi-tenant usa BookingService.getAvailableSlots().
+  // Se mantiene temporalmente para compatibilidad con paneles existentes.
   async function getHorasDisponibles(fecha, duracionServicio, configOverride = null) {
     const cfg = configOverride || await getConfig();
 
