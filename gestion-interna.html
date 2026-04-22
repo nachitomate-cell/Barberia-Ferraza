@@ -2624,7 +2624,6 @@ async function _initAdmin() {
 // ══════════════════════════════════════════════════════════════
 //  ACTIVIDAD Y NOTIFICACIONES
 // ══════════════════════════════════════════════════════════════
-let _firstActivityLoad = true;
 const sessionStartTime = new Date();
 const _notifiedDocs = new Set();
 let _activityUnsub = null;
@@ -2648,31 +2647,44 @@ function initActivityListener() {
   });
 
   // 2. Notificaciones Proactivas y Feed
-  _activityUnsub = db.collection('citas').onSnapshot(snap => {
-    if (_firstActivityLoad) {
-      snap.docs.forEach(d => _notifiedDocs.add(d.id));
-      _firstActivityLoad = false;
-      return;
-    }
+  // Solo escuchamos citas de hoy o futuras para no saturar la memoria
+  _activityUnsub = db.collection('citas')
+    .where('fecha', '>=', todayStr)
+    .onSnapshot(snap => {
+      
+      snap.docChanges().forEach(change => {
+        const data = change.doc.data();
+        const id = change.doc.id;
 
-    snap.docChanges().forEach(change => {
-      const data = change.doc.data();
-      const id = change.doc.id;
+        if (change.type === 'added') {
+          // Evaluar si es una cita realmente nueva (creada después de iniciar sesión)
+          let isRecent = false;
+          if (data.creadoEn && typeof data.creadoEn.toDate === 'function') {
+            isRecent = data.creadoEn.toDate() >= sessionStartTime;
+          } else if (change.doc && change.doc.metadata && change.doc.metadata.hasPendingWrites) {
+            isRecent = true; // Escritura local en proceso
+          }
 
-      if (change.type === 'added' && !_notifiedDocs.has(id)) {
-        _notifiedDocs.add(id);
-        _reproducirSonidoNuevaCita();
-        mostrarNotificacion(data.clienteNombre, data.hora, data.servicioNombre, id);
-        setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita'), 50);
-      } else if (change.type === 'modified') {
-        const est = data.estado || 'Confirmado';
-        if (est === 'Cancelado') {
-          setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada'), 50);
+          if (isRecent && !_notifiedDocs.has(id)) {
+            _notifiedDocs.add(id);
+            _reproducirSonidoNuevaCita();
+            mostrarNotificacion(data.clienteNombre, data.hora, data.servicioNombre, id);
+            setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita'), 50);
+          } else {
+            // Cita antigua o ya notificada (carga inicial)
+            _notifiedDocs.add(id);
+          }
+        } else if (change.type === 'modified') {
+          const est = data.estado || 'Confirmado';
+          // Validar ambos estados por si acaso
+          if (est === 'Cancelado' || est === 'Cancelada') {
+            setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada'), 50);
+          }
         }
-      }
-    });
-  }, err => console.warn('[Activity]', err.message));
+      });
+    }, err => console.warn('[Activity]', err.message));
 }
+
 
 function mostrarNotificacion(nombre, hora, servicio, citaId) {
   const toast = document.getElementById('notificationToast');
