@@ -205,11 +205,19 @@
           <div class="absolute inset-0 rounded-full bg-brand-neon/10 animate-ping opacity-75"></div>
           <i class="ph-fill ph-check-circle text-6xl text-neon relative z-10"></i>
         </div>
-        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva en el Sistema!</h2>
-        <p class="text-brand-neon/80 font-medium mb-10 text-[15px] leading-relaxed">Tu hora ya está guardada en la agenda, pero <strong class="text-white">debes enviar el WhatsApp</strong> que se acaba de abrir para que el barbero la apruebe definitivamente.</p>
+        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
+        
+        <!-- Contenedor Resumen Dinámico -->
+        <div class="bg-[#0a0a0d] border border-neon/30 rounded-xl p-4 mb-6 shadow-sm w-full max-w-sm mx-auto">
+          <p id="successSummaryService" class="font-bold text-brand-text text-lg leading-tight mb-2"></p>
+          <p id="successSummaryDate" class="text-neon font-medium text-sm flex items-center justify-center gap-1.5"></p>
+        </div>
+
+        <p class="text-brand-neon/80 font-medium mb-8 text-[15px] leading-relaxed">Tu espacio está 100% asegurado en nuestra agenda. Por favor, haz clic abajo para enviar un WhatsApp rápido al local y activar tus recordatorios.</p>
+        
         <a id="waBtnLink" href="#" target="_blank"
           class="w-full bg-[#25D366]/10 border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-6 hover:bg-[#25D366]/20">
-          Validar reserva por WhatsApp <i
+          Enviar WhatsApp <i
             class="ph-bold ph-whatsapp-logo text-2xl drop-shadow-[0_0_5px_rgba(37,211,102,0.8)]"></i>
         </a>
         <button onclick="window.location.reload()"
@@ -668,6 +676,12 @@
         const successEl = document.getElementById('success-state');
         successEl.classList.remove('hidden');
         successEl.classList.add('flex');
+
+        // Poblar el resumen dinámico
+        document.getElementById('successSummaryService').textContent = selectedServiceObj.nombre;
+        const [yyyy, mm, dd] = currentDateStr.split('-');
+        document.getElementById('successSummaryDate').innerHTML = `📅 <span>${dd}/${mm}/${yyyy} a las ${selectedTimeStr} hrs</span>`;
+
 
         const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar en su web. Soy ${nombre} y voy para un ${selectedServiceObj.nombre} a las ${selectedTimeStr} hrs el ${currentDateStr}. \n¿Todo ok? 💈`;
         const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;

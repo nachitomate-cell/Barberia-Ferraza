@@ -2669,7 +2669,7 @@ function initActivityListener() {
             _notifiedDocs.add(id);
             _reproducirSonidoNuevaCita();
             mostrarNotificacion(data.clienteNombre, data.hora, data.servicioNombre, id);
-            setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita'), 50);
+            setTimeout(() => addToActivityFeed(data.clienteNombre, data.fecha, data.hora, 'Nueva Cita'), 50);
           } else {
             // Cita antigua o ya notificada (carga inicial)
             _notifiedDocs.add(id);
@@ -2678,7 +2678,7 @@ function initActivityListener() {
           const est = data.estado || 'Confirmado';
           // Validar ambos estados por si acaso
           if (est === 'Cancelado' || est === 'Cancelada') {
-            setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada'), 50);
+            setTimeout(() => addToActivityFeed(data.clienteNombre, data.fecha, data.hora, 'Cita Cancelada'), 50);
           }
         }
       });
@@ -2724,7 +2724,7 @@ function dismissNotification(e, navigate) {
   }
 }
 
-function addToActivityFeed(nombre, hora, tipo) {
+function addToActivityFeed(nombre, fecha, hora, tipo) {
   const feed = document.getElementById('activityFeed');
   if (!feed) return;
   
@@ -2735,21 +2735,55 @@ function addToActivityFeed(nombre, hora, tipo) {
   const isCancel = tipo === 'Cita Cancelada';
   const colorCls = isCancel ? 'bg-red-500' : 'bg-admin-accent';
   
+  // Fallbacks seguros para datos faltantes
+  const safeNombre = nombre || 'Cliente sin nombre';
+  const safeHora = hora || '--:--';
+  let dateText = 'Fecha pendiente';
+  
+  if (fecha) {
+    const todayStr = dateToLocalStr(new Date());
+    if (fecha === todayStr) {
+      dateText = 'Hoy';
+    } else {
+      const parts = fecha.split('-');
+      if (parts.length === 3) {
+        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const dia = parseInt(parts[2], 10);
+        const mes = meses[parseInt(parts[1], 10) - 1];
+        dateText = `${dia} ${mes}`;
+      } else {
+        dateText = fecha;
+      }
+    }
+  }
+  
   const html = `
-    <div class="flex items-start gap-2 animate-pulse">
+    <div class="flex items-start gap-2 animate-pulse feed-item">
       <div class="w-2 h-2 rounded-full ${colorCls} mt-1.5 shrink-0 shadow-[0_0_8px_currentColor]"></div>
       <div>
         <p class="font-bold ${isCancel ? 'text-red-400' : 'text-white'} leading-tight">${tipo}</p>
-        <p class="text-[10px] text-gray-500 mt-0.5">${hora} - ${nombre || 'Cliente'}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">${dateText} • ${safeHora} - ${safeNombre}</p>
       </div>
     </div>
   `;
   feed.insertAdjacentHTML('afterbegin', html);
+  
+  // CONTROL DE DESBORDAMIENTO (Prevenir lag limitando a 15 eventos)
+  const items = feed.querySelectorAll('.feed-item');
+  if (items.length > 15) {
+    feed.removeChild(items[items.length - 1]);
+  }
 }
 
 function _reproducirSonidoNuevaCita() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Si el autoplay está bloqueado por el navegador
+    if (ctx.state === 'suspended') {
+      console.warn('[Sonido] DOMException: Autoplay bloqueado. El administrador debe hacer clic en el panel para activar el audio.');
+    }
+    
     // Secuencia de 2 tonos cortos: do5 → mi5
     const notas = [523.25, 659.25];
     notas.forEach((freq, i) => {
@@ -2761,7 +2795,7 @@ function _reproducirSonidoNuevaCita() {
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       const t0 = ctx.currentTime + i * 0.18;
       gain.gain.setValueAtTime(0, t0);
-      gain.gain.linearRampToValueAtTime(0.35, t0 + 0.02);
+      gain.gain.linearRampToValueAtTime(1.0, t0 + 0.02); // Volumen maximizado a 1.0
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
       osc.start(t0);
       osc.stop(t0 + 0.22);
