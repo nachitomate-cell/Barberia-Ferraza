@@ -44,12 +44,24 @@
 
     select.status-select { background-color:#111827; border-radius:.75rem; }
 
-    /* Timeline */
+    /* Timeline — estados con fondo sólido */
     .slot-free           { border-left:3px solid #374151; }
-    .slot-booked-Pendiente  { border-left:3px solid #fbbf24; }
-    .slot-booked-Completada { border-left:3px solid #34d399; }
-    .slot-booked-Cancelada  { border-left:3px solid #f87171; }
-    .slot-booked-NoAsistio  { border-left:3px solid #6b7280; }
+    .slot-booked-Pendiente  {
+      border-left: 3px solid #fbbf24;
+      background: linear-gradient(135deg, rgba(251,191,36,.08) 0%, rgba(17,24,39,0) 100%);
+    }
+    .slot-booked-Completada {
+      border-left: 3px solid #34d399;
+      background: linear-gradient(135deg, rgba(52,211,153,.09) 0%, rgba(17,24,39,0) 100%);
+    }
+    .slot-booked-Cancelada  {
+      border-left: 3px solid #f87171;
+      background: linear-gradient(135deg, rgba(248,113,113,.07) 0%, rgba(17,24,39,0) 100%);
+    }
+    .slot-booked-NoAsistio  {
+      border-left: 3px solid #6b7280;
+      background: linear-gradient(135deg, rgba(107,114,128,.06) 0%, rgba(17,24,39,0) 100%);
+    }
     .slot-break          { border-left:3px solid #6366f1; background:rgba(99,102,241,.06); }
     .slot-blocked        {
       border-left: 3px solid #ef4444;
@@ -58,6 +70,48 @@
         transparent, transparent 5px,
         rgba(239,68,68,.035) 5px, rgba(239,68,68,.035) 10px
       );
+    }
+
+    /* Pulso — cita más próxima a ocurrir */
+    @keyframes nextGlow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); border-color: rgba(52,211,153,.5); }
+      50%      { box-shadow: 0 0 18px 4px rgba(52,211,153,.25); border-color: rgba(52,211,153,.9); }
+    }
+    .slot-next-up {
+      animation: nextGlow 2.4s ease-in-out infinite;
+      border-left-width: 4px !important;
+      border-radius: 0 .75rem .75rem 0;
+    }
+
+    /* Widget próximas citas */
+    .proxima-card {
+      background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+      border: 1px solid rgba(52,211,153,.18);
+      border-radius: 1rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      transition: border-color .2s, box-shadow .2s;
+      flex: 1 1 200px;
+    }
+    .proxima-card:hover { border-color:rgba(52,211,153,.45); box-shadow:0 0 20px rgba(52,211,153,.08); }
+
+    /* Badge sidebar */
+    .nav-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 .35rem;
+      border-radius: 9999px;
+      background: #34d399;
+      color: #111827;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      margin-left: auto;
     }
 
     /* ── SIDE PANEL ─────────────────────────── */
@@ -255,6 +309,7 @@
       <button onclick="openTab('tab-citas',this)"
         class="nav-btn w-full flex items-center gap-3 bg-admin-accent/10 text-admin-accent px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
         <i class="ph-fill ph-calendar-check text-lg"></i> Citas de la Agenda
+        <span id="citasBadge" class="nav-badge hidden">0</span>
       </button>
       <button onclick="openTab('tab-servicios',this)"
         class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
@@ -362,6 +417,16 @@
           <div class="text-xs text-gray-500 font-semibold mb-1">Libres</div>
           <div id="statLibres" class="text-2xl font-bold text-gray-400">0</div>
         </div>
+      </div>
+
+      <!-- ══ WIDGET: LO QUE VIENE AHORA ══ -->
+      <div id="proximasWidget" class="mb-5 hidden">
+        <div class="flex items-center gap-2 mb-3">
+          <i class="ph-fill ph-lightning text-admin-accent text-base"></i>
+          <span class="text-sm font-bold text-gray-200">Lo que viene ahora</span>
+          <span class="text-[10px] text-gray-600 ml-auto">Próximas citas confirmadas</span>
+        </div>
+        <div id="proximasList" class="flex flex-wrap gap-3"></div>
       </div>
 
       <!-- Timeline -->
@@ -1260,14 +1325,20 @@ function renderTimeline() {
       if (booking.estado === 'Completada') totalIncome += srv.precio;
       const sk = statusKey(booking.estado);
 
+      // Detectar si es la cita más próxima a ocurrir (hoy, estado pendiente, hora futura)
+      const isNextUp = dStr === todayStr
+        && (booking.estado === 'Confirmado' || booking.estado === 'Pendiente' || !booking.estado)
+        && t >= nowMins;
+
       timelineEl.innerHTML += `
-      <div class="slot-booked-${sk} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
-        <span class="text-xs font-mono font-bold text-gray-400 w-12 shrink-0">${timeStr}</span>
+      <div class="slot-booked-${sk}${isNextUp ? ' slot-next-up' : ''} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
+        <span class="text-xs font-mono font-bold ${isNextUp ? 'text-admin-accent' : 'text-gray-400'} w-12 shrink-0">${timeStr}</span>
 
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2 mb-1">
             <span class="font-bold text-white text-sm">${booking.clienteNombre}</span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border badge-${sk}">${sk === 'NoAsistio' ? 'No Asistió' : sk}</span>
+            ${isNextUp ? '<span class="text-[9px] font-black text-admin-accent uppercase tracking-widest px-2 py-0.5 rounded-full bg-admin-accent/10 border border-admin-accent/30">Próxima</span>' : ''}
           </div>
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
             <span><i class="ph ph-scissors mr-1"></i>${booking.servicioNombre}</span>
@@ -1287,6 +1358,9 @@ function renderTimeline() {
           </select>
         </div>
       </div>`;
+
+      // Solo marcar la primera cita próxima
+      if (isNextUp) nowMins = Infinity; // evitar que más citas sean marcadas
     }
   }
 
@@ -1297,6 +1371,7 @@ function renderTimeline() {
   document.getElementById('statLibres').textContent   = libres;
   loadMonthlyMetrics();
   renderBloqueosDelDia();
+  renderProximasCitas();
 }
 
 // ── Cambio de estado + prompt de sello ──────────────────────────
@@ -2361,6 +2436,124 @@ async function _initAdmin() {
   _resubscribeCitas();
   loadMonthlyMetrics();
   initLookbookAdmin();
+  initBadgeYSonido();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BADGE DE NOTIFICACIONES — citas creadas hoy
+// ══════════════════════════════════════════════════════════════
+let _badgeUnsub = null;
+
+function initBadgeYSonido() {
+  const todayStr = dateToLocalStr(new Date());
+  let _citasTodayIds = null; // null = primera carga (no dispara sonido)
+
+  _badgeUnsub = db.collection('citas')
+    .where('fecha', '==', todayStr)
+    .onSnapshot(snap => {
+      // ── Badge: cuenta total de citas de hoy ──
+      const total = snap.size;
+      const badgeEl = document.getElementById('citasBadge');
+      if (badgeEl) {
+        if (total > 0) {
+          badgeEl.textContent = total > 99 ? '99+' : total;
+          badgeEl.classList.remove('hidden');
+        } else {
+          badgeEl.classList.add('hidden');
+        }
+      }
+
+      // ── Alerta sonora: solo en nuevas inserciones (no en la carga inicial) ──
+      const currentIds = new Set(snap.docs.map(d => d.id));
+      if (_citasTodayIds !== null) {
+        const hayNuevas = [...currentIds].some(id => !_citasTodayIds.has(id));
+        if (hayNuevas) _reproducirSonidoNuevaCita();
+      }
+      _citasTodayIds = currentIds;
+    }, err => console.warn('[Badge]', err.message));
+}
+
+function _reproducirSonidoNuevaCita() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Secuencia de 2 tonos cortos: do5 → mi5
+    const notas = [523.25, 659.25];
+    notas.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      const t0 = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.35, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch(e) { console.warn('[Sonido]', e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  WIDGET: PRÓXIMAS CITAS (Lo que viene ahora)
+// ══════════════════════════════════════════════════════════════
+function renderProximasCitas() {
+  const widgetEl = document.getElementById('proximasWidget');
+  const listEl   = document.getElementById('proximasList');
+  if (!widgetEl || !listEl) return;
+
+  const todayStr = dateToLocalStr(new Date());
+  // Solo mostrar el widget cuando el admin está viendo HOY
+  if (dateToLocalStr(currentAdminDate) !== todayStr) {
+    widgetEl.classList.add('hidden');
+    return;
+  }
+
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+
+  // Filtrar citas pendientes/confirmadas a partir de ahora y ordenar
+  const proximas = _citasDiaCache
+    .filter(c => {
+      const est = c.estado || 'Confirmado';
+      return (est === 'Confirmado' || est === 'Pendiente') && timeToMins(c.hora) >= nowMins;
+    })
+    .sort((a, b) => a.hora.localeCompare(b.hora))
+    .slice(0, 4);
+
+  if (!proximas.length) {
+    widgetEl.classList.add('hidden');
+    return;
+  }
+
+  widgetEl.classList.remove('hidden');
+
+  listEl.innerHTML = proximas.map((c, idx) => {
+    const tel     = (c.clienteTelefono || '').replace(/\D/g, '');
+    const waLink  = tel
+      ? `https://wa.me/${tel}?text=${encodeURIComponent(`Hola ${c.clienteNombre} 👋, te recordamos tu cita en ${SHOP.nombre} hoy a las ${c.hora}. ¡Te esperamos!`)}`
+      : '';
+    const isFirst = idx === 0;
+    return `
+    <div class="proxima-card${isFirst ? ' slot-next-up' : ''}">
+      <div class="flex items-center justify-between">
+        <span class="text-lg font-black text-admin-accent font-mono">${c.hora}</span>
+        ${isFirst ? '<span class="text-[9px] font-black text-admin-accent uppercase tracking-widest">Próxima</span>' : ''}
+      </div>
+      <p class="font-bold text-white text-sm truncate">${c.clienteNombre}</p>
+      <p class="text-xs text-gray-500 truncate flex items-center gap-1">
+        <i class="ph ph-scissors"></i>${c.servicioNombre || '—'}
+      </p>
+      ${waLink
+        ? `<a href="${waLink}" target="_blank"
+            class="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-bold text-[#25D366]
+                   bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg py-1.5 hover:bg-[#25D366]/20 transition-colors">
+            <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+           </a>`
+        : '<span class="text-[10px] text-gray-700">Sin teléfono</span>'}
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
