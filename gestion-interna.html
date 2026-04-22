@@ -228,7 +228,20 @@
   </style>
 </head>
 
-<body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0">
+<body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0 relative overflow-x-hidden">
+
+<!-- ══════════════════════════════════════
+     NOTIFICATION TOAST
+══════════════════════════════════════ -->
+<div id="notificationToast" class="fixed top-6 right-6 z-[9999] translate-x-[150%] transition-transform duration-500 ease-out flex items-center gap-4 bg-admin-card border border-admin-accent/50 shadow-[0_0_20px_rgba(52,211,153,0.15)] rounded-2xl p-4 cursor-pointer hover:bg-admin-border" onclick="dismissNotification()">
+  <div class="w-10 h-10 rounded-full bg-admin-accent/20 flex items-center justify-center shrink-0">
+    <i class="ph-fill ph-bell-ringing text-admin-accent text-xl"></i>
+  </div>
+  <div>
+    <h4 class="text-sm font-bold text-white leading-tight">¡Nueva Cita!</h4>
+    <p id="notifMessage" class="text-xs text-gray-400 mt-0.5">Juan a las 15:30</p>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      LOGIN OVERLAY — oculta el panel hasta autenticar
@@ -329,7 +342,16 @@
       </button>
     </nav>
 
-    <div class="p-4 border-t border-admin-border space-y-1">
+    <div class="px-5 pb-4 flex-shrink-0">
+      <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+        <i class="ph-fill ph-activity text-admin-accent"></i> Actividad Reciente
+      </h3>
+      <div id="activityFeed" class="space-y-3 max-h-48 overflow-y-auto pr-1 text-xs">
+        <p class="text-gray-600 italic">Esperando actividad...</p>
+      </div>
+    </div>
+
+    <div class="p-4 border-t border-admin-border space-y-1 shrink-0">
       <button onclick="window.location.href='index.html'"
         class="flex items-center gap-3 text-gray-500 hover:text-white px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-white/5">
         <i class="ph ph-house text-lg"></i> Sitio Web
@@ -466,6 +488,13 @@
               <input type="number" id="ns-duracion" placeholder="Duración (min)"
                 class="w-1/2 bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent">
             </div>
+            <select id="ns-categoria" class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent" style="color-scheme:dark;">
+              <option value="Cortes" selected>Cortes</option>
+              <option value="Barba">Barba</option>
+              <option value="Combos">Combos</option>
+              <option value="Extras">Extras</option>
+              <option value="Otro">Otro</option>
+            </select>
             <button onclick="crearServicio()"
               class="w-full bg-admin-accent text-admin-bg font-bold py-3 rounded-xl hover:bg-emerald-300 transition-colors text-sm">
               Guardar Servicio
@@ -921,6 +950,16 @@
           <input type="number" id="edit-srv-duracion" class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent">
         </div>
       </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-400 mb-2">Categoría</label>
+        <select id="edit-srv-categoria" class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent" style="color-scheme:dark;">
+          <option value="Cortes">Cortes</option>
+          <option value="Barba">Barba</option>
+          <option value="Combos">Combos</option>
+          <option value="Extras">Extras</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
       <div class="flex justify-end gap-3 pt-2 border-t border-admin-border">
         <button onclick="closeEditModal()" class="text-gray-400 font-bold px-5 py-3 rounded-xl hover:text-white text-sm">Cancelar</button>
         <button onclick="guardarEdicionServicio()" class="bg-admin-accent text-admin-bg font-bold px-6 py-3 rounded-xl hover:bg-emerald-300 text-sm">Guardar</button>
@@ -1272,6 +1311,9 @@ function renderTimeline() {
   for (let t = start; t < end; t += interval) {
     const timeStr = minsToTime(t);
     const isPast  = dStr === todayStr && t < nowMins;
+    const isCurrent = dStr === todayStr && nowMins >= t && nowMins < t + interval;
+    const currentClass = isCurrent ? ' is-current ring-2 ring-admin-accent/80 relative rounded-xl my-1' : '';
+    const currentLabel = isCurrent ? '<span class="absolute -top-2.5 left-4 text-[9px] font-black bg-admin-accent text-admin-bg px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)] animate-[pulse_2s_ease-in-out_infinite] uppercase tracking-widest z-10">Ahora</span>' : '';
 
     // Colación
     if (colacion) {
@@ -1314,7 +1356,8 @@ function renderTimeline() {
     if (!booking) {
       libres++;
       timelineEl.innerHTML += `
-      <div class="slot-free flex items-center gap-4 px-5 py-3 hover:bg-white/2 transition-colors ${isPast ? 'opacity-35' : ''}">
+      <div id="slot-${t}" class="slot-free flex items-center gap-4 px-5 py-3 hover:bg-white/2 transition-colors ${isPast ? 'opacity-35' : ''}${currentClass}">
+        ${currentLabel}
         <span class="text-xs font-mono font-bold text-gray-600 w-12 shrink-0">${timeStr}</span>
         <span class="text-xs text-gray-700">Disponible</span>
         <button onclick="quickBook('${timeStr}')" class="ml-auto text-[10px] font-bold text-gray-600 hover:text-admin-accent px-3 py-1.5 rounded-lg border border-admin-border/50 hover:border-admin-accent/40 transition-all">+ Cita</button>
@@ -1331,7 +1374,8 @@ function renderTimeline() {
         && t >= nowMins;
 
       timelineEl.innerHTML += `
-      <div class="slot-booked-${sk}${isNextUp ? ' slot-next-up' : ''} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
+      <div id="cita-${booking.id}" class="slot-booked-${sk}${isNextUp ? ' slot-next-up' : ''}${currentClass} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
+        ${currentLabel}
         <span class="text-xs font-mono font-bold ${isNextUp ? 'text-admin-accent' : 'text-gray-400'} w-12 shrink-0">${timeStr}</span>
 
         <div class="flex-1 min-w-0">
@@ -1596,10 +1640,11 @@ function loadServicesAdmin() {
     card.className = 'srv-card bg-admin-card border border-admin-border rounded-2xl p-4 flex items-center gap-4 transition-all';
     card.draggable = true;
     card.dataset.id = String(s.id);
+    const catBadge = s.categoria ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-admin-bg text-gray-400 border-admin-border ml-2">${s.categoria}</span>` : `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-admin-bg text-gray-400 border-admin-border ml-2">Otro</span>`;
     card.innerHTML = `
       <div class="text-gray-600 px-1 shrink-0 select-none" title="Arrastrar"><i class="ph ph-dots-six-vertical text-2xl"></i></div>
       <div class="flex-1 min-w-0">
-        <h4 class="font-bold text-white text-sm">${s.nombre}</h4>
+        <h4 class="font-bold text-white text-sm flex items-center">${s.nombre} ${catBadge}</h4>
         <p class="text-xs text-gray-400 mt-0.5">$${s.precio.toLocaleString('es-CL')} · ${s.duracion} min</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -1628,13 +1673,15 @@ async function crearServicio() {
   const nom = document.getElementById('ns-nombre').value.trim();
   const pre = parseInt(document.getElementById('ns-precio').value);
   const dur = parseInt(document.getElementById('ns-duracion').value);
+  const cat = document.getElementById('ns-categoria').value;
   if (!nom || !pre || !dur) return alert('Rellena todos los campos.');
   try {
-    await FDB.addServicio({ nombre: nom, precio: pre, duracion: dur });
+    await FDB.addServicio({ nombre: nom, precio: pre, duracion: dur, categoria: cat });
     // onSnapshot actualiza _serviciosCache y llama loadServicesAdmin automáticamente
     document.getElementById('ns-nombre').value  = '';
     document.getElementById('ns-precio').value  = '';
     document.getElementById('ns-duracion').value = '';
+    document.getElementById('ns-categoria').value = 'Cortes';
   } catch(e) { alert('Error al crear servicio: ' + e.message); }
 }
 
@@ -1652,6 +1699,7 @@ function abrirEditar(id) {
   document.getElementById('edit-srv-nombre').value  = s.nombre;
   document.getElementById('edit-srv-precio').value  = s.precio;
   document.getElementById('edit-srv-duracion').value = s.duracion;
+  document.getElementById('edit-srv-categoria').value = s.categoria || 'Otro';
   document.getElementById('editServiceModal').classList.replace('hidden','flex');
 }
 function closeEditModal() { document.getElementById('editServiceModal').classList.replace('flex','hidden'); }
@@ -1660,9 +1708,10 @@ async function guardarEdicionServicio() {
   const nom = document.getElementById('edit-srv-nombre').value.trim();
   const pre = parseInt(document.getElementById('edit-srv-precio').value);
   const dur = parseInt(document.getElementById('edit-srv-duracion').value);
+  const cat = document.getElementById('edit-srv-categoria').value;
   if (!nom || !pre || !dur) return alert('Completa todos los campos.');
   try {
-    await FDB.updateServicio(id, { nombre: nom, precio: pre, duracion: dur });
+    await FDB.updateServicio(id, { nombre: nom, precio: pre, duracion: dur, categoria: cat });
     closeEditModal();
     // onSnapshot actualiza la lista automáticamente
   } catch(e) { alert('Error al guardar: ' + e.message); }
@@ -2436,41 +2485,122 @@ async function _initAdmin() {
   _resubscribeCitas();
   loadMonthlyMetrics();
   initLookbookAdmin();
-  initBadgeYSonido();
+  initActivityListener();
 }
 
 // ══════════════════════════════════════════════════════════════
-//  BADGE DE NOTIFICACIONES — citas creadas hoy
+//  ACTIVIDAD Y NOTIFICACIONES
 // ══════════════════════════════════════════════════════════════
-let _badgeUnsub = null;
+let _firstActivityLoad = true;
+const sessionStartTime = new Date();
+const _notifiedDocs = new Set();
+let _activityUnsub = null;
+let _toastIdTarget = null; // para hacer scroll
 
-function initBadgeYSonido() {
+function initActivityListener() {
   const todayStr = dateToLocalStr(new Date());
-  let _citasTodayIds = null; // null = primera carga (no dispara sonido)
 
-  _badgeUnsub = db.collection('citas')
-    .where('fecha', '==', todayStr)
-    .onSnapshot(snap => {
-      // ── Badge: cuenta total de citas de hoy ──
-      const total = snap.size;
-      const badgeEl = document.getElementById('citasBadge');
-      if (badgeEl) {
-        if (total > 0) {
-          badgeEl.textContent = total > 99 ? '99+' : total;
-          badgeEl.classList.remove('hidden');
-        } else {
-          badgeEl.classList.add('hidden');
+  // 1. Badge (Solo conteo del día actual)
+  db.collection('citas').where('fecha', '==', todayStr).onSnapshot(snap => {
+    const total = snap.size;
+    const badgeEl = document.getElementById('citasBadge');
+    if (badgeEl) {
+      if (total > 0) {
+        badgeEl.textContent = total > 99 ? '99+' : total;
+        badgeEl.classList.remove('hidden');
+      } else {
+        badgeEl.classList.add('hidden');
+      }
+    }
+  });
+
+  // 2. Notificaciones Proactivas y Feed
+  _activityUnsub = db.collection('citas').onSnapshot(snap => {
+    if (_firstActivityLoad) {
+      snap.docs.forEach(d => _notifiedDocs.add(d.id));
+      _firstActivityLoad = false;
+      return;
+    }
+
+    snap.docChanges().forEach(change => {
+      const data = change.doc.data();
+      const id = change.doc.id;
+
+      if (change.type === 'added' && !_notifiedDocs.has(id)) {
+        _notifiedDocs.add(id);
+        _reproducirSonidoNuevaCita();
+        mostrarNotificacion(data.clienteNombre, data.hora, id);
+        addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita');
+      } else if (change.type === 'modified') {
+        const est = data.estado || 'Confirmado';
+        if (est === 'Cancelado') {
+          addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada');
         }
       }
+    });
+  }, err => console.warn('[Activity]', err.message));
+}
 
-      // ── Alerta sonora: solo en nuevas inserciones (no en la carga inicial) ──
-      const currentIds = new Set(snap.docs.map(d => d.id));
-      if (_citasTodayIds !== null) {
-        const hayNuevas = [...currentIds].some(id => !_citasTodayIds.has(id));
-        if (hayNuevas) _reproducirSonidoNuevaCita();
+function mostrarNotificacion(nombre, hora, citaId) {
+  const toast = document.getElementById('notificationToast');
+  const msgEl = document.getElementById('notifMessage');
+  if (!toast || !msgEl) return;
+  
+  msgEl.textContent = `${nombre} a las ${hora}`;
+  toast.classList.remove('translate-x-[150%]');
+  _toastIdTarget = citaId;
+
+  // Auto-hide
+  setTimeout(() => dismissNotification(), 5000);
+}
+
+function dismissNotification() {
+  const toast = document.getElementById('notificationToast');
+  if (toast) toast.classList.add('translate-x-[150%]');
+}
+
+// Interacción del Toast para hacer scroll
+document.addEventListener('DOMContentLoaded', () => {
+  const toast = document.getElementById('notificationToast');
+  if (toast) {
+    toast.addEventListener('click', () => {
+      dismissNotification();
+      if (_toastIdTarget) {
+        setTimeout(() => {
+          const el = document.getElementById(`cita-${_toastIdTarget}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-4', 'ring-admin-accent', 'ring-opacity-50', 'transition-all', 'rounded-2xl');
+            setTimeout(() => el.classList.remove('ring-4', 'ring-admin-accent', 'ring-opacity-50'), 3000);
+          } else {
+            showMiniToast('La cita es de otro día');
+          }
+        }, 300);
       }
-      _citasTodayIds = currentIds;
-    }, err => console.warn('[Badge]', err.message));
+    });
+  }
+});
+
+function addToActivityFeed(nombre, hora, tipo) {
+  const feed = document.getElementById('activityFeed');
+  if (!feed) return;
+  
+  // Limpiar mensaje de "Esperando" si existe
+  if (feed.querySelector('p.italic')) feed.innerHTML = '';
+  
+  const isCancel = tipo === 'Cita Cancelada';
+  const colorCls = isCancel ? 'bg-red-500' : 'bg-admin-accent';
+  
+  const html = `
+    <div class="flex items-start gap-2 animate-[fadeSlideUp_0.3s_ease-out]">
+      <div class="w-2 h-2 rounded-full ${colorCls} mt-1.5 shrink-0 shadow-[0_0_8px_currentColor]"></div>
+      <div>
+        <p class="font-bold ${isCancel ? 'text-red-400' : 'text-white'} leading-tight">${tipo}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">${hora} - ${nombre}</p>
+      </div>
+    </div>
+  `;
+  feed.insertAdjacentHTML('afterbegin', html);
 }
 
 function _reproducirSonidoNuevaCita() {

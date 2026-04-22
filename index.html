@@ -105,9 +105,13 @@
 
     <main class="px-6 pb-6 relative min-h-[500px]">
 
-      <!-- PASO 1 -->
       <section id="step1" class="animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
         <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">¿Qué servicio buscas?</h2>
+        
+        <!-- Category Pills -->
+        <div id="categoryPills" class="flex gap-2 overflow-x-auto pb-4 mb-4 no-scrollbar -mx-6 px-6 scroll-smooth">
+        </div>
+
         <!-- Skeleton visible mientras carga Firestore -->
         <div id="servicesSkeleton" class="grid grid-cols-2 gap-4">
           <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
@@ -286,8 +290,9 @@
       grid.innerHTML = '';
       services.forEach((s, i) => {
         const icon = _ICONS[i % _ICONS.length];
+        const cat = s.categoria || 'Otro';
         grid.innerHTML += `
-          <button onclick="selectService(this)" data-service-id="${s.id}"
+          <button onclick="selectService(this)" data-service-id="${s.id}" data-category="${cat}"
             class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
             <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
             <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
@@ -299,6 +304,52 @@
               <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
             </span>
           </button>`;
+      });
+    }
+
+    function renderCategories(services) {
+      const pillsContainer = document.getElementById('categoryPills');
+      if (!pillsContainer) return;
+
+      const categories = ['Todos'];
+      services.forEach(s => {
+        const cat = s.categoria || 'Otro';
+        if (!categories.includes(cat)) {
+          categories.push(cat);
+        }
+      });
+
+      pillsContainer.innerHTML = '';
+      categories.forEach((cat, index) => {
+        const isActive = index === 0;
+        const btn = document.createElement('button');
+        btn.className = `category-pill flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-bold border transition-all active:scale-95 ${isActive ? 'bg-brand-neon/10 border-neon text-neon shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'bg-[#0a0a0d] border-brand-accent/20 text-gray-400 hover:border-brand-neon/50 hover:text-gray-200'}`;
+        btn.textContent = cat;
+        btn.onclick = () => {
+          document.querySelectorAll('.category-pill').forEach(el => {
+            el.classList.remove('bg-brand-neon/10', 'border-neon', 'text-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.15)]');
+            el.classList.add('bg-[#0a0a0d]', 'border-brand-accent/20', 'text-gray-400');
+          });
+          btn.classList.add('bg-brand-neon/10', 'border-neon', 'text-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.15)]');
+          btn.classList.remove('bg-[#0a0a0d]', 'border-brand-accent/20', 'text-gray-400');
+          filterServicesByCategory(cat);
+        };
+        pillsContainer.appendChild(btn);
+      });
+    }
+
+    function filterServicesByCategory(category) {
+      const allButtons = document.querySelectorAll('.service-option');
+      allButtons.forEach(btn => {
+        if (category === 'Todos') {
+          btn.style.display = 'flex';
+        } else {
+          if (btn.dataset.category === category) {
+            btn.style.display = 'flex';
+          } else {
+            btn.style.display = 'none';
+          }
+        }
       });
     }
 
@@ -336,6 +387,7 @@
       // desde atributos onclick (que ejecutan en scope global, no en closure)
       window._fsServices = _fsServices;
       await precargarBloqueos();
+      renderCategories(_fsServices);
       _renderServicesGrid(_fsServices);
     }
 
