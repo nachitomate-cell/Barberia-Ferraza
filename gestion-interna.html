@@ -289,9 +289,14 @@
   </div>
 </div>
 
+<!-- BOTÓN PARA DESBLOQUEAR AUDIO -->
+<button id="btnUnlockAudio" onclick="unlockAudioManual()" class="fixed bottom-6 left-6 md:bottom-10 md:left-72 z-[9999] bg-gray-800 text-gray-300 border border-gray-600 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-gray-700 transition-all font-bold text-sm">
+  <i class="ph-bold ph-speaker-slash"></i> Activar Sonido
+</button>
+
 <!-- ══════════════════════════════════════
      LOGIN OVERLAY — oculta el panel hasta autenticar
-══════════════════════════════════════ -->
+     ══════════════════════════════════════ -->
 <div id="loginOverlay" class="fixed inset-0 z-[9999] flex items-center justify-center bg-admin-bg px-4">
   <div class="w-full max-w-sm bg-admin-card border border-admin-border rounded-2xl p-8 shadow-2xl">
     <div class="flex items-center gap-3 mb-8">
@@ -2803,6 +2808,45 @@ function _reproducirSonidoNuevaCita() {
     setTimeout(() => ctx.close(), 1000);
   } catch(e) { console.warn('[Sonido]', e.message); }
 }
+
+// ══════════════════════════════════════════════════════════════
+//  DESBLOQUEO DE AUDIO (Fix para Autoplay Block)
+// ══════════════════════════════════════════════════════════════
+let _audioUnlocked = false;
+
+function unlockAudioManual() {
+  if (_audioUnlocked) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.value = 0; // Volumen 0% (silencioso)
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.01);
+    
+    _audioUnlocked = true;
+    const btn = document.getElementById('btnUnlockAudio');
+    if (btn) btn.classList.add('hidden');
+    
+    showMiniToast('Sonido activado correctamente');
+  } catch(e) {
+    console.warn('Error al desbloquear audio', e);
+  }
+}
+
+// Detección Inteligente: Cualquier clic en la página desbloquea el audio naturalmente
+document.addEventListener('click', function unlockOnAnyClick(e) {
+  if (_audioUnlocked) return;
+  if (e.target.closest('#btnUnlockAudio')) return; // El botón tiene su propia lógica
+  
+  _audioUnlocked = true;
+  const btn = document.getElementById('btnUnlockAudio');
+  if (btn) btn.classList.add('hidden');
+  
+  document.removeEventListener('click', unlockOnAnyClick);
+});
 
 // ══════════════════════════════════════════════════════════════
 //  WIDGET: PRÓXIMAS CITAS (Lo que viene ahora)
