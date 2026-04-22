@@ -2,13 +2,16 @@
   'use strict';
 
   // ════════════════════════════════════════════════════════════════
-  // TENANT RESOLVER v3 — Path-Based Routing
+  // TENANT RESOLVER v3.1 — Path-Based Routing con Slugs
   //
   // Prioridad de resolución:
-  //   1. PATHNAME  →  /{tenantId}  o  /{tenantId}/admin
+  //   1. PATHNAME  →  /{slug}  o  /{slug}/admin
   //   2. QUERY     →  ?local=tenantId  (retrocompatibilidad + dev local)
   //   3. SESSION   →  sessionStorage
   //   4. DEFAULT   →  'ferraza'
+  //
+  // El slug es la parte visible en la URL (ej: "barberia-ferraza").
+  // El id es la clave interna de Firestore (ej: "ferraza").
   // ════════════════════════════════════════════════════════════════
 
   function normalizeTenantId(value) {
@@ -25,17 +28,32 @@
   }
 
   /**
-   * Extrae el tenantId desde el pathname.
-   * Soporta:  /navaja  →  'navaja'
-   *           /navaja/admin  →  'navaja'
-   *           /  →  ''
-   *           /ceo  →  '' (no es un tenant)
-   *           /js/app/store.js  →  '' (static asset, no tenant)
+   * Busca un tenant por su slug (la parte de la URL).
+   * Si no lo encuentra por slug, intenta por ID como fallback.
+   */
+  function getTenantBySlug(slug) {
+    if (!slug) return null;
+    const catalog = getTenantCatalog();
+    // Primero buscar por slug
+    for (const key of Object.keys(catalog)) {
+      if (catalog[key].slug === slug) return catalog[key];
+    }
+    // Fallback: buscar por ID directo (retrocompatibilidad)
+    return catalog[slug] || null;
+  }
+
+  /**
+   * Extrae el slug desde el pathname.
+   * /barberia-ferraza       → 'barberia-ferraza'
+   * /barberia-ferraza/admin → 'barberia-ferraza'
+   * /navaja                 → 'navaja'
+   * /                       → ''
+   * /ceo                    → '' (ruta reservada)
+   * /js/app/store.js        → '' (asset estático)
    */
   function getTenantFromPath() {
     try {
       const path = window.location.pathname;
-      // Ignorar rutas raíz, rutas de assets conocidos, y la ruta /ceo
       if (!path || path === '/') return '';
 
       const segments = path.split('/').filter(Boolean);
@@ -43,11 +61,11 @@
 
       const first = normalizeTenantId(segments[0]);
 
-      // Ignorar si es un archivo estático o ruta reservada
+      // Ignorar archivos estáticos y rutas reservadas
       const reserved = ['js', 'css', 'img', 'fonts', 'assets', 'output.css',
                         'ceo', 'api', '_vercel', 'favicon.ico', 'node_modules'];
       if (reserved.includes(first)) return '';
-      if (first.includes('.')) return ''; // archivos como index.html, firebase-config.js
+      if (first.includes('.')) return ''; // archivos como index.html
 
       return first;
     } catch (_) {
@@ -103,10 +121,7 @@
     }
   }
 
-  /**
-   * Detecta si estamos en la vista /admin de un tenant.
-   * Útil para que bootstrap.js sepa qué HTML cargar.
-   */
+  /** Detecta si estamos en la vista /admin de un tenant. */
   function isAdminView() {
     const segs = window.location.pathname.split('/').filter(Boolean);
     return segs.length >= 2 && segs[1] === 'admin';
@@ -116,63 +131,75 @@
     const defaultTenantId = normalizeTenantId(window.APP_CONFIG?.defaultTenantId || 'ferraza');
 
     // Prioridad: PATH > QUERY > SESSION > DEFAULT
-    const pathTenant = getTenantFromPath();
+    const pathSlug = getTenantFromPath();
     const queryTenant = getTenantFromQuery();
     const sessionTenant = getTenantFromSession();
 
-    let requestedTenantId;
+    let resolvedTenant = null;
     let source;
 
-    if (pathTenant) {
+    if (pathSlug) {
+      // El path trae un slug → resolver por slug
+      resolvedTenant = getTenantBySlug(pathSlug);
       source = 'path';
-      requestedTenantId = pathTenant;
-    } else if (queryTenant) {
-      source = 'query';
-      requestedTenantId = queryTenant;
-    } else if (sessionTenant) {
-      source = 'session';
-      requestedTenantId = sessionTenant;
-    } else {
-      source = 'default';
-      requestedTenantId = defaultTenantId;
     }
+
+    if (!resolvedTenant && queryTenant) {
+      // Query trae un ID directo → resolver por ID (o slug)
+      resolvedTenant = getTenantBySlug(queryTenant) || getTenantById(queryTenant);
+      source = 'query';
+    }
+
+    if (!resolvedTenant && sessionTenant) {
+      resolvedTenant = getTenantById(sessionTenant);
+      source = 'session';
+    }
+
+    if (!resolvedTenant) {
+      resolvedTenant = getTenantById(defaultTenantId);
+      source = 'default';
+    }
+
+    const resolvedTenantId = resolvedTenant?.id || defaultTenantId;
 
     // Si el nuevo tenant es distinto al de la sesión → limpiar memoria
-    if (sessionTenant && sessionTenant !== requestedTenantId && (pathTenant || queryTenant)) {
-      console.info(`[TenantResolver] Cambio de tenant: ${sessionTenant} → ${requestedTenantId}. Limpiando store.`);
+    if (sessionTenant && sessionTenant !== resolvedTenantId && (pathSlug || queryTenant)) {
+      console.info(`[TenantResolver] Cambio de tenant: ${sessionTenant} → ${resolvedTenantId}. Limpiando store.`);
       _clearStoreMemory();
     }
-
-    const resolvedTenant = getTenantById(requestedTenantId) || getTenantById(defaultTenantId);
-    const resolvedTenantId = resolvedTenant?.id || defaultTenantId;
 
     persistTenantId(resolvedTenantId);
 
     return {
       tenantId: resolvedTenantId,
       tenant: resolvedTenant,
-      requestedTenantId,
+      slug: resolvedTenant?.slug || resolvedTenantId,
+      requestedTenantId: resolvedTenantId,
       source,
-      found: Boolean(getTenantById(requestedTenantId)),
+      found: Boolean(resolvedTenant),
       isAdmin: isAdminView(),
     };
   }
 
   /**
-   * Genera URLs canónicas para navegar entre vistas del tenant.
-   * Uso: TenantResolver.url('navaja', 'client')  → '/navaja'
-   *      TenantResolver.url('navaja', 'admin')   → '/navaja/admin'
-   *      TenantResolver.url(null,     'ceo')     → '/ceo'
+   * Genera URLs canónicas usando el SLUG del tenant.
+   * Uso: TenantResolver.url('ferraza', 'client')  → '/barberia-ferraza'
+   *      TenantResolver.url('navaja',  'admin')   → '/navaja/admin'
+   *      TenantResolver.url(null,      'ceo')     → '/ceo'
    */
   function url(tenantId, view = 'client') {
     if (view === 'ceo') return '/ceo';
-    if (view === 'admin') return `/${tenantId}/admin`;
-    return `/${tenantId}`;
+    // Buscar el slug del tenant para generar la URL bonita
+    const tenant = getTenantById(tenantId);
+    const slug = tenant?.slug || tenantId;
+    if (view === 'admin') return `/${slug}/admin`;
+    return `/${slug}`;
   }
 
   window.TenantResolver = {
     normalizeTenantId,
     getTenantById,
+    getTenantBySlug,
     getTenantCatalog,
     getTenantFromPath,
     getTenantFromQuery,

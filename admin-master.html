@@ -257,7 +257,7 @@
           </td>
           <td class="p-4 text-right">
             <div class="flex items-center justify-end gap-2">
-              <a href="/${t.id}/admin" target="_blank" class="bg-purple-900/30 hover:bg-purple-neon hover:text-white border border-purple-neon text-purple-neon font-bold py-1.5 px-4 rounded-lg transition-all text-xs uppercase tracking-wider flex items-center gap-2">
+              <a href="/${t.slug || t.id}/admin" target="_blank" class="bg-purple-900/30 hover:bg-purple-neon hover:text-white border border-purple-neon text-purple-neon font-bold py-1.5 px-4 rounded-lg transition-all text-xs uppercase tracking-wider flex items-center gap-2">
                 <i class="ph-bold ph-arrow-square-out"></i> Entrar
               </a>
               <button onclick="saveTenant('${t.id}')" class="bg-cyan-900/30 hover:bg-cyan-neon hover:text-[#030014] border border-cyan-neon text-cyan-neon font-bold py-1.5 px-4 rounded-lg transition-all text-xs uppercase tracking-wider flex items-center gap-2">

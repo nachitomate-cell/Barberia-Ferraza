@@ -12,7 +12,7 @@
   const TENANT_CATALOG = {
     ferraza: {
       id: 'ferraza',
-      slug: 'ferraza',
+      slug: 'barberia-ferraza',
       displayName: 'Barberia Ferraza',
       shortName: 'Ferraza',
       status: 'active',
