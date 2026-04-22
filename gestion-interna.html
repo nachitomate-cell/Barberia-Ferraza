@@ -225,6 +225,45 @@
         max-height: 90dvh;
       }
     }
+    /* ── CRM DRAWER ─────────────────────────── */
+    #crmOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 200;
+      display: none;
+    }
+    #crmDrawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100dvh;
+      width: 100%;
+      max-width: 24rem;  /* 384px */
+      background: #111827;
+      border-left: 1px solid #374151;
+      box-shadow: -8px 0 40px rgba(0,0,0,.6);
+      z-index: 201;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform .3s cubic-bezier(.16,1,.3,1);
+    }
+    #crmDrawer.open  { transform: translateX(0); }
+    #crmOverlay.open { display: block; }
+
+    /* ── STICKY ADMIN HEADER ─────────────────── */
+    #sticky-admin-header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 90 !important;
+      background: #111827 !important;
+      border-bottom: 1px solid #374151;
+      padding-top: .5rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
   </style>
 </head>
 
@@ -233,13 +272,20 @@
 <!-- ══════════════════════════════════════
      NOTIFICATION TOAST
 ══════════════════════════════════════ -->
-<div id="notificationToast" class="fixed top-6 right-6 z-[9999] translate-x-[150%] transition-transform duration-500 ease-out flex items-center gap-4 bg-admin-card border border-admin-accent/50 shadow-[0_0_20px_rgba(52,211,153,0.15)] rounded-2xl p-4 cursor-pointer hover:bg-admin-border" onclick="dismissNotification()">
-  <div class="w-10 h-10 rounded-full bg-admin-accent/20 flex items-center justify-center shrink-0">
-    <i class="ph-fill ph-bell-ringing text-admin-accent text-xl"></i>
-  </div>
-  <div>
-    <h4 class="text-sm font-bold text-white leading-tight">¡Nueva Cita!</h4>
-    <p id="notifMessage" class="text-xs text-gray-400 mt-0.5">Juan a las 15:30</p>
+<div class="fixed inset-x-0 top-0 pointer-events-none z-[9999] flex justify-center px-4 lg:px-10 pt-24 md:pt-14">
+  <div class="w-full max-w-5xl flex justify-end">
+    <div id="notificationToast" class="pointer-events-auto opacity-0 -translate-y-4 transition-all duration-500 ease-in-out flex items-start gap-3 bg-gray-900 border-l-4 border-l-admin-accent border-y border-r border-gray-700 shadow-2xl rounded-r-2xl p-4 w-72 sm:w-[22rem] cursor-pointer group" onclick="dismissNotification(event, true)">
+      <div class="w-8 h-8 rounded-full bg-admin-accent/10 flex items-center justify-center shrink-0 border border-admin-accent/20 shadow-[0_0_10px_rgba(52,211,153,0.3)] animate-pulse">
+        <i class="ph-fill ph-bell-ringing text-admin-accent text-sm"></i>
+      </div>
+      <div class="flex-1 min-w-0 pr-2">
+        <h4 class="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-0.5 group-hover:text-gray-300 transition-colors">Reserva Confirmada</h4>
+        <p id="notifMessage" class="text-sm font-medium text-admin-accent truncate">Nombre | 15:30 | Servicio</p>
+      </div>
+      <button onclick="dismissNotification(event, false)" class="text-gray-500 hover:text-white transition-colors shrink-0 p-1">
+        <i class="ph-bold ph-x text-sm"></i>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -371,59 +417,98 @@
     <!-- ══════════════════ TAB 1: CITAS ══════════════════ -->
     <div id="tab-citas" class="tab-content block">
 
-      <!-- Métricas del mes -->
-      <div class="mb-6 p-6 bg-gradient-to-br from-admin-card to-admin-bg border border-admin-accent/20 rounded-2xl relative overflow-hidden">
-        <div class="absolute top-0 right-0 pt-4 pr-6 opacity-5">
-          <i class="ph-fill ph-trend-up text-7xl text-admin-accent"></i>
+      <!-- STICKY HEADER -->
+      <header id="sticky-admin-header" class="sticky top-0 z-50 bg-[#111827] border-b border-gray-700 pt-2 pb-4 mb-5 px-4 -mx-4 lg:px-10 lg:-mx-10">
+        
+        <!-- Métricas del mes -->
+        <div class="mb-6 p-6 bg-gradient-to-br from-admin-card to-admin-bg border border-admin-accent/20 rounded-2xl relative overflow-hidden shadow-lg shadow-admin-bg">
+          <div class="absolute top-0 right-0 pt-4 pr-6 opacity-5">
+            <i class="ph-fill ph-trend-up text-7xl text-admin-accent"></i>
+          </div>
+          <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-3">Mes Actual · Solo citas completadas</p>
+          <div class="grid grid-cols-3 gap-3 sm:gap-6">
+            <div>
+              <span id="monthlyRevTotal" class="block text-admin-accent text-xl sm:text-3xl font-black mb-0.5 truncate">$0</span>
+              <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Ganancias</span>
+            </div>
+            <div>
+              <span id="monthlyRevCount" class="block text-white text-xl sm:text-2xl font-bold mb-0.5">0</span>
+              <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Completadas</span>
+            </div>
+            <div>
+              <span id="monthlyPending" class="block text-yellow-400 text-xl sm:text-2xl font-bold mb-0.5">0</span>
+              <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Pendientes</span>
+            </div>
+          </div>
         </div>
-        <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-3">Mes Actual · Solo citas completadas</p>
-        <div class="grid grid-cols-3 gap-3 sm:gap-6">
-          <div>
-            <span id="monthlyRevTotal" class="block text-admin-accent text-xl sm:text-3xl font-black mb-0.5 truncate">$0</span>
-            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Ganancias</span>
-          </div>
-          <div>
-            <span id="monthlyRevCount" class="block text-white text-xl sm:text-2xl font-bold mb-0.5">0</span>
-            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Completadas</span>
-          </div>
-          <div>
-            <span id="monthlyPending" class="block text-yellow-400 text-xl sm:text-2xl font-bold mb-0.5">0</span>
-            <span class="text-[10px] sm:text-xs text-gray-500 font-medium">Pendientes</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- Controles de fecha -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-4">
-        <div class="flex items-center gap-2">
-          <button onclick="changeAdminDate(-1)"
-            class="w-10 h-10 rounded-xl bg-admin-card border border-admin-border hover:bg-admin-border flex items-center justify-center transition-colors">
-            <i class="ph-bold ph-caret-left"></i>
-          </button>
-          <p id="adminDateText"
-            class="text-admin-accent font-bold px-4 py-2 bg-admin-card border border-admin-border rounded-xl text-sm min-w-[160px] text-center">
-            Cargando...
-          </p>
-          <button onclick="changeAdminDate(1)"
-            class="w-10 h-10 rounded-xl bg-admin-card border border-admin-border hover:bg-admin-border flex items-center justify-center transition-colors">
-            <i class="ph-bold ph-caret-right"></i>
-          </button>
-          <button onclick="jumpToToday()"
-            class="text-xs font-bold text-gray-400 hover:text-admin-accent px-3 py-2 rounded-xl border border-admin-border bg-admin-card transition-colors">
-            Hoy
-          </button>
+        <!-- Controles de fecha + Mini-Calendario -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <button onclick="changeAdminDate(-1)"
+              class="w-10 h-10 rounded-xl bg-admin-card border border-admin-border hover:bg-admin-border flex items-center justify-center transition-colors shrink-0">
+              <i class="ph-bold ph-caret-left"></i>
+            </button>
+
+            <!-- Botón que abre el mini-calendario -->
+            <div style="position:relative;" id="calendarWrapper">
+              <button id="btnCustomCalendar" onclick="toggleCustomCalendar()"
+                style="display:flex; align-items:center; gap:.5rem; color:#34d399; font-weight:700; padding:.5rem 1rem; background:#1f2937; border:1px solid #374151; border-radius:.75rem; font-size:.875rem; min-width:190px; cursor:pointer; transition:background .2s; font-family:inherit;">
+                <i class="ph-fill ph-calendar" style="color:#34d399; flex-shrink:0;"></i>
+                <span id="adminDateText" style="flex:1; text-align:left;">Cargando...</span>
+                <i class="ph-bold ph-caret-down" style="font-size:.7rem; color:#6b7280; flex-shrink:0;"></i>
+              </button>
+
+              <!-- Dropdown del mini-calendario (inline CSS puro, sin Tailwind) -->
+              <div id="customCalendarDropdown"
+                style="display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:9999; width:296px; background:#1f2937; border:1px solid #374151; border-radius:1rem; box-shadow:0 20px 60px rgba(0,0,0,.7); padding:1rem;">
+
+                <!-- Navegación de mes -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem;">
+                  <button onclick="shiftCalMonth(-1)" style="width:1.75rem; height:1.75rem; border-radius:.5rem; background:rgba(255,255,255,.05); border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+                    <i class="ph-bold ph-caret-left" style="font-size:.65rem;"></i>
+                  </button>
+                  <span id="calMonthLabel" style="font-size:.7rem; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:.08em;">—</span>
+                  <button onclick="shiftCalMonth(1)" style="width:1.75rem; height:1.75rem; border-radius:.5rem; background:rgba(255,255,255,.05); border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+                    <i class="ph-bold ph-caret-right" style="font-size:.65rem;"></i>
+                  </button>
+                </div>
+
+                <!-- Cabecera días semana (grid inline) -->
+                <div id="calWeekDays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px;"></div>
+                <!-- Cuadrícula de días (grid inline) -->
+                <div id="calDaysGrid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;"></div>
+
+                <!-- Leyenda heatmap -->
+                <div style="display:flex; align-items:center; justify-content:center; gap:.75rem; margin-top:.75rem; padding-top:.75rem; border-top:1px solid #374151;">
+                  <div style="display:flex; align-items:center; gap:.25rem;"><span style="width:6px; height:6px; border-radius:50%; background:#34d399; display:inline-block;"></span><span style="font-size:9px; color:#6b7280;">Libre</span></div>
+                  <div style="display:flex; align-items:center; gap:.25rem;"><span style="width:6px; height:6px; border-radius:50%; background:#fbbf24; display:inline-block;"></span><span style="font-size:9px; color:#6b7280;">Medio</span></div>
+                  <div style="display:flex; align-items:center; gap:.25rem;"><span style="width:6px; height:6px; border-radius:50%; background:#f87171; display:inline-block;"></span><span style="font-size:9px; color:#6b7280;">Lleno</span></div>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="changeAdminDate(1)"
+              class="w-10 h-10 rounded-xl bg-admin-card border border-admin-border hover:bg-admin-border flex items-center justify-center transition-colors shrink-0">
+              <i class="ph-bold ph-caret-right"></i>
+            </button>
+            <button onclick="jumpToToday()"
+              class="text-xs font-bold text-gray-400 hover:text-admin-accent px-3 py-2 rounded-xl border border-admin-border bg-admin-card transition-colors">
+              Hoy
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openBloqueoModal()"
+              class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 font-bold px-4 py-3 min-h-[44px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-sm">
+              <i class="ph-bold ph-prohibit text-base"></i> Bloquear
+            </button>
+            <button onclick="openManualBookingModal()"
+              class="hidden sm:flex items-center gap-2 bg-admin-accent text-admin-bg font-bold px-5 py-3 min-h-[44px] rounded-xl hover:bg-emerald-300 active:bg-emerald-400 transition-colors text-sm">
+              <i class="ph-bold ph-plus text-base"></i> Nueva Cita
+            </button>
+          </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openBloqueoModal()"
-            class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 font-bold px-4 py-3 min-h-[44px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-sm">
-            <i class="ph-bold ph-prohibit text-base"></i> Bloquear
-          </button>
-          <button onclick="openManualBookingModal()"
-            class="hidden sm:flex items-center gap-2 bg-admin-accent text-admin-bg font-bold px-5 py-3 min-h-[44px] rounded-xl hover:bg-emerald-300 active:bg-emerald-400 transition-colors text-sm">
-            <i class="ph-bold ph-plus text-base"></i> Nueva Cita
-          </button>
-        </div>
-      </div>
+      </header> <!-- END STICKY HEADER -->
 
       <!-- Stats del día -->
       <div class="grid grid-cols-3 gap-3 mb-5">
@@ -1241,6 +1326,14 @@ function jumpToToday() {
   currentAdminDate = new Date();
   _resubscribeCitas();
 }
+function jumpToSelectedDate(dateStr) {
+  if (!dateStr) return;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    currentAdminDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    _resubscribeCitas();
+  }
+}
 
 // Suscripción en tiempo real para citas y bloqueos del día visible
 function _resubscribeCitas() {
@@ -1307,6 +1400,7 @@ function renderTimeline() {
   }
 
   let booked = 0, libres = 0, totalIncome = 0;
+  let nextUpFound = false;
 
   for (let t = start; t < end; t += interval) {
     const timeStr = minsToTime(t);
@@ -1356,11 +1450,11 @@ function renderTimeline() {
     if (!booking) {
       libres++;
       timelineEl.innerHTML += `
-      <div id="slot-${t}" class="slot-free flex items-center gap-4 px-5 py-3 hover:bg-white/2 transition-colors ${isPast ? 'opacity-35' : ''}${currentClass}">
+      <div id="slot-${t}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${timeStr}')" class="slot-free flex items-center gap-4 px-5 py-3 hover:bg-white/5 transition-all ${isPast ? 'opacity-35' : ''}${currentClass}">
         ${currentLabel}
-        <span class="text-xs font-mono font-bold text-gray-600 w-12 shrink-0">${timeStr}</span>
-        <span class="text-xs text-gray-700">Disponible</span>
-        <button onclick="quickBook('${timeStr}')" class="ml-auto text-[10px] font-bold text-gray-600 hover:text-admin-accent px-3 py-1.5 rounded-lg border border-admin-border/50 hover:border-admin-accent/40 transition-all">+ Cita</button>
+        <span class="text-xs font-mono font-bold text-gray-400 w-12 shrink-0">${timeStr}</span>
+        <span class="text-xs text-gray-300 pointer-events-none">Disponible</span>
+        <button onclick="quickBook('${timeStr}')" class="ml-auto text-[10px] font-bold text-gray-400 hover:text-admin-accent px-3 py-1.5 rounded-lg border border-admin-border/50 hover:border-admin-accent/40 transition-all">+ Cita</button>
       </div>`;
     } else {
       booked++;
@@ -1371,16 +1465,19 @@ function renderTimeline() {
       // Detectar si es la cita más próxima a ocurrir (hoy, estado pendiente, hora futura)
       const isNextUp = dStr === todayStr
         && (booking.estado === 'Confirmado' || booking.estado === 'Pendiente' || !booking.estado)
-        && t >= nowMins;
+        && t >= nowMins
+        && !nextUpFound;
+
+      if (isNextUp) nextUpFound = true;
 
       timelineEl.innerHTML += `
-      <div id="cita-${booking.id}" class="slot-booked-${sk}${isNextUp ? ' slot-next-up' : ''}${currentClass} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
+      <div id="cita-${booking.id}" draggable="true" ondragstart="handleDragStart(event, '${booking.id}')" ondragend="handleDragEnd(event)" class="slot-booked-${sk}${isNextUp ? ' slot-next-up' : ''}${currentClass} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-all cursor-grab active:cursor-grabbing">
         ${currentLabel}
         <span class="text-xs font-mono font-bold ${isNextUp ? 'text-admin-accent' : 'text-gray-400'} w-12 shrink-0">${timeStr}</span>
 
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 cursor-pointer group" onclick="openCRMDrawer('${(booking.clienteTelefono||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${(booking.clienteNombre||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" title="Ver perfil del cliente">
           <div class="flex flex-wrap items-center gap-2 mb-1">
-            <span class="font-bold text-white text-sm">${booking.clienteNombre}</span>
+            <span class="font-bold text-white group-hover:text-admin-accent transition-colors text-sm">${booking.clienteNombre}</span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border badge-${sk}">${sk === 'NoAsistio' ? 'No Asistió' : sk}</span>
             ${isNextUp ? '<span class="text-[9px] font-black text-admin-accent uppercase tracking-widest px-2 py-0.5 rounded-full bg-admin-accent/10 border border-admin-accent/30">Próxima</span>' : ''}
           </div>
@@ -1402,9 +1499,6 @@ function renderTimeline() {
           </select>
         </div>
       </div>`;
-
-      // Solo marcar la primera cita próxima
-      if (isNextUp) nowMins = Infinity; // evitar que más citas sean marcadas
     }
   }
 
@@ -1416,6 +1510,45 @@ function renderTimeline() {
   loadMonthlyMetrics();
   renderBloqueosDelDia();
   renderProximasCitas();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DRAG & DROP PARA REAGENDAR CITAS
+// ══════════════════════════════════════════════════════════════
+function handleDragStart(e, citaId) {
+  e.dataTransfer.setData('text/plain', citaId);
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => e.target.style.opacity = '0.4', 0);
+}
+function handleDragEnd(e) {
+  e.target.style.opacity = '1';
+}
+function handleDragOver(e) {
+  e.preventDefault(); // Permitir drop
+  e.dataTransfer.dropEffect = 'move';
+}
+function handleDragEnter(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('bg-admin-accent/10', 'border-dashed', 'border-admin-accent', 'scale-[1.02]');
+}
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove('bg-admin-accent/10', 'border-dashed', 'border-admin-accent', 'scale-[1.02]');
+}
+async function handleDrop(e, newTime) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('bg-admin-accent/10', 'border-dashed', 'border-admin-accent', 'scale-[1.02]');
+  
+  const citaId = e.dataTransfer.getData('text/plain');
+  if (!citaId) return;
+
+  try {
+    showMiniToast('Reagendando...');
+    await db.collection('citas').doc(citaId).update({ hora: newTime });
+    // UI se actualiza por onSnapshot
+  } catch(err) {
+    console.error(err);
+    showMiniToast('Error al reagendar');
+  }
 }
 
 // ── Cambio de estado + prompt de sello ──────────────────────────
@@ -2529,74 +2662,73 @@ function initActivityListener() {
       if (change.type === 'added' && !_notifiedDocs.has(id)) {
         _notifiedDocs.add(id);
         _reproducirSonidoNuevaCita();
-        mostrarNotificacion(data.clienteNombre, data.hora, id);
-        addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita');
+        mostrarNotificacion(data.clienteNombre, data.hora, data.servicioNombre, id);
+        setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Nueva Cita'), 50);
       } else if (change.type === 'modified') {
         const est = data.estado || 'Confirmado';
         if (est === 'Cancelado') {
-          addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada');
+          setTimeout(() => addToActivityFeed(data.clienteNombre, data.hora, 'Cita Cancelada'), 50);
         }
       }
     });
   }, err => console.warn('[Activity]', err.message));
 }
 
-function mostrarNotificacion(nombre, hora, citaId) {
+function mostrarNotificacion(nombre, hora, servicio, citaId) {
   const toast = document.getElementById('notificationToast');
   const msgEl = document.getElementById('notifMessage');
   if (!toast || !msgEl) return;
   
-  msgEl.textContent = `${nombre} a las ${hora}`;
-  toast.classList.remove('translate-x-[150%]');
+  msgEl.textContent = `${nombre || 'Cliente'} | ${hora} | ${servicio || 'Servicio'}`;
   _toastIdTarget = citaId;
+  
+  toast.classList.remove('opacity-0', '-translate-y-4');
+  toast.classList.add('opacity-100', 'translate-y-0');
 
   // Auto-hide
-  setTimeout(() => dismissNotification(), 5000);
+  if (toast.timeoutId) clearTimeout(toast.timeoutId);
+  toast.timeoutId = setTimeout(() => dismissNotification(), 5000);
 }
 
-function dismissNotification() {
-  const toast = document.getElementById('notificationToast');
-  if (toast) toast.classList.add('translate-x-[150%]');
-}
-
-// Interacción del Toast para hacer scroll
-document.addEventListener('DOMContentLoaded', () => {
+function dismissNotification(e, navigate) {
+  if (e) e.stopPropagation();
   const toast = document.getElementById('notificationToast');
   if (toast) {
-    toast.addEventListener('click', () => {
-      dismissNotification();
-      if (_toastIdTarget) {
-        setTimeout(() => {
-          const el = document.getElementById(`cita-${_toastIdTarget}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-4', 'ring-admin-accent', 'ring-opacity-50', 'transition-all', 'rounded-2xl');
-            setTimeout(() => el.classList.remove('ring-4', 'ring-admin-accent', 'ring-opacity-50'), 3000);
-          } else {
-            showMiniToast('La cita es de otro día');
-          }
-        }, 300);
-      }
-    });
+    toast.classList.add('opacity-0', '-translate-y-4');
+    toast.classList.remove('opacity-100', 'translate-y-0');
   }
-});
+
+  if (navigate && _toastIdTarget) {
+    setTimeout(() => {
+      const el = document.getElementById(`cita-${_toastIdTarget}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-admin-accent', 'ring-opacity-50', 'transition-all', 'rounded-2xl');
+        setTimeout(() => el.classList.remove('ring-4', 'ring-admin-accent', 'ring-opacity-50'), 3000);
+      } else {
+        showMiniToast('La cita es de otro día');
+      }
+    }, 300);
+  }
+}
 
 function addToActivityFeed(nombre, hora, tipo) {
   const feed = document.getElementById('activityFeed');
   if (!feed) return;
   
   // Limpiar mensaje de "Esperando" si existe
-  if (feed.querySelector('p.italic')) feed.innerHTML = '';
+  const placeholder = feed.querySelector('p.italic');
+  if (placeholder) placeholder.remove();
   
   const isCancel = tipo === 'Cita Cancelada';
   const colorCls = isCancel ? 'bg-red-500' : 'bg-admin-accent';
   
   const html = `
-    <div class="flex items-start gap-2 animate-[fadeSlideUp_0.3s_ease-out]">
+    <div class="flex items-start gap-2 animate-pulse">
       <div class="w-2 h-2 rounded-full ${colorCls} mt-1.5 shrink-0 shadow-[0_0_8px_currentColor]"></div>
       <div>
         <p class="font-bold ${isCancel ? 'text-red-400' : 'text-white'} leading-tight">${tipo}</p>
-        <p class="text-[10px] text-gray-500 mt-0.5">${hora} - ${nombre}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">${hora} - ${nombre || 'Cliente'}</p>
       </div>
     </div>
   `;
@@ -2825,7 +2957,386 @@ async function deleteLookbookPhoto(docId, url) {
     showMiniToast('Error: ' + err.message);
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+//  MINI-CRM Y ANALÍTICA DE CLIENTES
+// ══════════════════════════════════════════════════════════════
+let _currentCrmPhone = '';
+
+async function openCRMDrawer(telefono, nombre) {
+  if (!telefono || telefono === 'undefined' || telefono.trim() === '') {
+    showMiniToast('Este cliente no tiene teléfono registrado');
+    return;
+  }
+  
+  _currentCrmPhone = telefono.replace(/\D/g, ''); // Sanitizar
+  if (!_currentCrmPhone) {
+    showMiniToast('Teléfono inválido para el historial');
+    return;
+  }
+
+  const drawer = document.getElementById('crmDrawer');
+  const overlay = document.getElementById('crmOverlay');
+  const loader = document.getElementById('crmLoader');
+  
+  document.getElementById('crmName').textContent = nombre || 'Cliente sin nombre';
+  document.getElementById('crmPhone').textContent = '+' + _currentCrmPhone;
+  document.getElementById('crmNoteInput').value = '';
+  document.getElementById('crmBadges').innerHTML = '';
+
+  overlay.classList.add('open');
+  drawer.classList.add('open');
+  loader.style.display = 'flex';
+  loader.style.position = 'absolute';
+
+  try {
+    // 1. Cargar historial de citas
+    const citasSnap = await db.collection('citas').where('clienteTelefono', '==', telefono).get();
+    
+    let totalCompletadas = 0;
+    let totalCanceladas = 0;
+    let ultimaVisitaStr = '-';
+    let ultimaVisitaMins = 0;
+    const serviciosCount = {};
+
+    citasSnap.forEach(doc => {
+      const c = doc.data();
+      const est = c.estado || 'Confirmado';
+      
+      if (est === 'Completada') {
+        totalCompletadas++;
+        // Servicio
+        if (c.servicioNombre) {
+          serviciosCount[c.servicioNombre] = (serviciosCount[c.servicioNombre] || 0) + 1;
+        }
+        // Última visita
+        const parts = c.fecha.split('-'); // YYYY-MM-DD
+        if (parts.length === 3) {
+          const d = new Date(parts[0], parts[1]-1, parts[2]);
+          if (d.getTime() > ultimaVisitaMins) {
+            ultimaVisitaMins = d.getTime();
+            ultimaVisitaStr = c.fecha;
+          }
+        }
+      } else if (est === 'Cancelada' || est === 'NoAsistio' || est === 'No Asistió') {
+        totalCanceladas++;
+      }
+    });
+
+    const totalCitas = totalCompletadas + totalCanceladas;
+    const noShowRate = totalCitas > 0 ? Math.round((totalCanceladas / totalCitas) * 100) : 0;
+    
+    // Servicio favorito
+    let favSrv = '-';
+    let maxSrv = 0;
+    for (const [srv, count] of Object.entries(serviciosCount)) {
+      if (count > maxSrv) { maxSrv = count; favSrv = srv; }
+    }
+
+    document.getElementById('crmTotalVisits').textContent = totalCompletadas;
+    document.getElementById('crmNoShow').textContent = noShowRate + '%';
+    document.getElementById('crmNoShow').className = `text-2xl font-black ${noShowRate > 30 ? 'text-red-400' : 'text-white'}`;
+    document.getElementById('crmLastVisit').textContent = ultimaVisitaStr !== '-' ? ultimaVisitaStr : 'Sin visitas previas';
+    document.getElementById('crmFavService').textContent = favSrv;
+
+    // Badges
+    const badgesHtml = [];
+    if (totalCompletadas === 0) {
+      badgesHtml.push('<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"><i class="ph-fill ph-star mr-1"></i>Primera Vez</span>');
+    }
+    if (totalCompletadas > 10) {
+      badgesHtml.push('<span class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"><i class="ph-fill ph-crown mr-1"></i>VIP</span>');
+    }
+    if (ultimaVisitaMins > 0) {
+      const diasInactivo = Math.floor((new Date().getTime() - ultimaVisitaMins) / (1000 * 3600 * 24));
+      if (diasInactivo > 45) {
+        badgesHtml.push(`<span class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"><i class="ph-fill ph-warning mr-1"></i>Riesgo de Fuga (${diasInactivo} días)</span>`);
+      }
+    }
+    document.getElementById('crmBadges').innerHTML = badgesHtml.join('');
+
+    // 2. Cargar nota privada
+    const noteSnap = await db.collection('admin_notes').doc(_currentCrmPhone).get();
+    if (noteSnap.exists) {
+      document.getElementById('crmNoteInput').value = noteSnap.data().nota || '';
+    }
+
+  } catch (err) {
+    console.error('[CRM]', err);
+    if (err.message && err.message.toLowerCase().includes('permission')) {
+      document.getElementById('crmBadges').innerHTML = '<span style="background:rgba(234,179,8,.08); color:#eab308; border:1px solid rgba(234,179,8,.25); padding:.5rem .75rem; border-radius:.75rem; font-size:.7rem; font-weight:700; display:flex; align-items:center; gap:.4rem;"><i class="ph-fill ph-warning"></i>Configurando acceso a notas... (Contacta al soporte si el error persiste)</span>';
+    } else {
+      showMiniToast('Error al cargar perfil');
+    }
+  } finally {
+    loader.style.display = 'none';
+  }
+}
+
+function closeCRMDrawer() {
+  document.getElementById('crmDrawer').classList.remove('open');
+  document.getElementById('crmOverlay').classList.remove('open');
+}
+
+async function saveCRMNote() {
+  const nota = document.getElementById('crmNoteInput').value.trim();
+  if (!_currentCrmPhone) return;
+
+  const btn = document.querySelector('#crmDrawer button[onclick="saveCRMNote()"]');
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Guardando...';
+  btn.disabled = true;
+
+  try {
+    await db.collection('admin_notes').doc(_currentCrmPhone).set({ nota, updatedAt: new Date() }, { merge: true });
+    showMiniToast('Nota guardada exitosamente');
+  } catch (err) {
+    console.error('[CRM Save]', err);
+    showMiniToast('Error al guardar nota');
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
+}
 </script>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   MINI-CALENDARIO CUSTOM CON HEATMAP
+════════════════════════════════════════════════════════════ */
+
+let _calViewYear  = new Date().getFullYear();
+let _calViewMonth = new Date().getMonth(); // 0-indexed
+let _calHeatmapData = {}; // { 'YYYY-MM-DD': count }
+
+const CAL_WEEK_LABELS = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+const CAL_MONTHS_ES = [
+  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+];
+
+/* Abrir / cerrar el dropdown */
+function toggleCustomCalendar() {
+  const dd = document.getElementById('customCalendarDropdown');
+  const isOpen = dd.style.display !== 'none';
+  if (isOpen) {
+    closeCustomCalendar();
+  } else {
+    // Sincronizar vista con la fecha actualmente seleccionada
+    if (currentAdminDate) {
+      _calViewYear  = currentAdminDate.getFullYear();
+      _calViewMonth = currentAdminDate.getMonth();
+    }
+    dd.style.display = 'block';
+    renderCustomCalendar(_calViewYear, _calViewMonth);
+  }
+}
+
+function closeCustomCalendar() {
+  document.getElementById('customCalendarDropdown').style.display = 'none';
+}
+
+/* Navegar entre meses dentro del dropdown */
+function shiftCalMonth(delta) {
+  _calViewMonth += delta;
+  if (_calViewMonth > 11) { _calViewMonth = 0;  _calViewYear++; }
+  if (_calViewMonth <  0) { _calViewMonth = 11; _calViewYear--; }
+  renderCustomCalendar(_calViewYear, _calViewMonth);
+}
+
+/* ── Renderizar cuadrícula ── */
+async function renderCustomCalendar(year, month) {
+  // Etiqueta del mes
+  document.getElementById('calMonthLabel').textContent =
+    `${CAL_MONTHS_ES[month]} ${year}`;
+
+  // Cabecera de días
+  const wdEl = document.getElementById('calWeekDays');
+  wdEl.innerHTML = CAL_WEEK_LABELS.map(d =>
+    `<span style="font-size:9px; font-weight:700; color:#6b7280; text-align:center; padding:2px 0; display:block;">${d}</span>`
+  ).join('');
+
+  // Cargar heatmap del mes desde Firestore
+  await _loadHeatmap(year, month);
+
+  // Calcular primer día del mes (lunes=0)
+  const firstDay = new Date(year, month, 1);
+  let startDow = firstDay.getDay(); // 0=dom
+  startDow = (startDow + 6) % 7;   // convertir a lunes=0
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = _toDateStr(new Date());
+
+  const grid = document.getElementById('calDaysGrid');
+  let html = '';
+
+  // Celdas vacías antes del primer día
+  for (let i = 0; i < startDow; i++) {
+    html += `<span></span>`;
+  }
+
+  // Días del mes
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const count   = _calHeatmapData[dateStr] || 0;
+    const dot     = _heatmapDot(count);
+    const isToday = dateStr === todayStr;
+    const isSelected = currentAdminDate && _toDateStr(currentAdminDate) === dateStr;
+
+    const bg      = isSelected ? '#34d399' : isToday ? 'rgba(52,211,153,.15)' : 'rgba(255,255,255,.04)';
+    const color   = isSelected ? '#111827' : isToday  ? '#34d399'             : '#e5e7eb';
+    const border  = isSelected ? '1px solid #34d399' : isToday ? '1px solid rgba(52,211,153,.4)' : '1px solid transparent';
+    const fw      = (isSelected || isToday) ? '700' : '400';
+
+    html += `
+      <button onclick="selectCalDay('${dateStr}')" title="${count} citas"
+        style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:5px 2px; border-radius:8px; background:${bg}; border:${border}; color:${color}; font-size:11px; font-weight:${fw}; cursor:pointer; transition:all .15s; gap:2px;">
+        <span>${d}</span>
+        ${dot}
+      </button>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function _heatmapDot(count) {
+  if (count <= 0) return ''; // No mostrar punto si no hay citas
+
+  let color;
+  // Umbrales realistas de barbería
+  if (count <= 6) {
+    color = '#34d399'; // Verde (1 a 6 citas: Mucho espacio)
+  } else if (count <= 13) {
+    color = '#fbbf24'; // Amarillo (7 a 13 citas: Medio lleno)
+  } else {
+    color = '#f87171'; // Rojo (14 o más citas: Lleno)
+  }
+
+  return `<span style="width:4px; height:4px; border-radius:50%; background:${color}; display:block; box-shadow: 0 0 4px ${color}44;"></span>`;
+}
+
+async function _loadHeatmap(year, month) {
+  _calHeatmapData = {};
+  try {
+    const start = new Date(year, month, 1);
+    const end   = new Date(year, month + 1, 0, 23, 59, 59);
+
+    // Consulta real a Firestore filtrando por rango de fechas del mes
+    const snap = await db.collection('citas')
+      .where('fecha', '>=', _toDateStr(start))
+      .where('fecha', '<=', _toDateStr(end))
+      .get();
+
+    snap.forEach(doc => {
+      const data = doc.data();
+      // FILTRADO REAL: Solo contamos citas que NO estén canceladas
+      if (data.fecha && data.estado !== 'Cancelada') {
+        _calHeatmapData[data.fecha] = (_calHeatmapData[data.fecha] || 0) + 1;
+      }
+    });
+  } catch (e) {
+    console.warn('[Heatmap Error]', e.message);
+  }
+}
+
+/* Seleccionar un día del calendario */
+function selectCalDay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  currentAdminDate = new Date(y, m - 1, d);
+  closeCustomCalendar();
+  _resubscribeCitas(); // ya llama renderTimeline() que actualiza adminDateText
+}
+
+/* Helper */
+function _toDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+/* Cierre al hacer clic fuera del calendario */
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('calendarWrapper');
+  const dd      = document.getElementById('customCalendarDropdown');
+  if (dd && dd.style.display !== 'none' && wrapper && !wrapper.contains(e.target)) {
+    closeCustomCalendar();
+  }
+});
+</script>
+
+
+<!-- ════════════════════ MINI-CRM DRAWER ════════════════════ -->
+<div id="crmOverlay" onclick="closeCRMDrawer()"></div>
+
+<div id="crmDrawer">
+
+  <!-- Header del panel -->
+  <div style="padding: 1.5rem; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: flex-start; background: rgba(17,24,39,.6); flex-shrink: 0;">
+    <div style="min-width:0; flex:1;">
+      <p style="font-size:10px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.1em; margin-bottom:.25rem;">Perfil del Cliente</p>
+      <h2 id="crmName" style="font-size:1.15rem; font-weight:900; color:#fff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Cargando...</h2>
+      <p id="crmPhone" style="font-size:.8rem; color:#6b7280; font-family:monospace; margin-top:.15rem;"></p>
+    </div>
+    <button onclick="closeCRMDrawer()" style="width:2rem; height:2rem; border-radius:50%; background:rgba(255,255,255,.05); border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:.75rem;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+      <i class="ph-bold ph-x" style="font-size:.9rem;"></i>
+    </button>
+  </div>
+
+  <!-- Cuerpo scrolleable -->
+  <div style="flex:1; overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:1.25rem; position:relative;">
+
+    <!-- Loader -->
+    <div id="crmLoader" style="display:none; position:absolute; inset:0; background:rgba(17,24,39,.85); z-index:10; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;">
+      <i class="ph-bold ph-spinner" style="font-size:2rem; color:#34d399; animation:spin 1s linear infinite;"></i>
+      <p style="font-size:.72rem; color:#9ca3af;">Analizando perfil...</p>
+    </div>
+
+    <!-- Badges -->
+    <div id="crmBadges" style="display:flex; flex-wrap:wrap; gap:.5rem;"></div>
+
+    <!-- Métricas -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+      <div style="background:#1f2937; border:1px solid #374151; border-radius:.75rem; padding:1rem;">
+        <p style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;">Total Visitas</p>
+        <p id="crmTotalVisits" style="font-size:1.6rem; font-weight:900; color:#fff; margin:0;">0</p>
+      </div>
+      <div style="background:#1f2937; border:1px solid #374151; border-radius:.75rem; padding:1rem;">
+        <p style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;">Tasa No-Show</p>
+        <p id="crmNoShow" style="font-size:1.6rem; font-weight:900; color:#fff; margin:0;">0%</p>
+      </div>
+      <div style="background:#1f2937; border:1px solid #374151; border-radius:.75rem; padding:1rem; grid-column:span 2; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <p style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;">Última Visita</p>
+          <p id="crmLastVisit" style="font-size:.875rem; font-weight:500; color:#d1d5db; margin:0;">-</p>
+        </div>
+        <i class="ph-fill ph-calendar-check" style="font-size:1.4rem; color:rgba(52,211,153,.4);"></i>
+      </div>
+      <div style="background:#1f2937; border:1px solid #374151; border-radius:.75rem; padding:1rem; grid-column:span 2; display:flex; justify-content:space-between; align-items:center;">
+        <div style="min-width:0; flex:1;">
+          <p style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;">Servicio Favorito</p>
+          <p id="crmFavService" style="font-size:.875rem; font-weight:600; color:#34d399; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</p>
+        </div>
+        <i class="ph-fill ph-scissors" style="font-size:1.4rem; color:rgba(52,211,153,.4); flex-shrink:0; margin-left:.5rem;"></i>
+      </div>
+    </div>
+
+    <!-- Notas Privadas -->
+    <div>
+      <h3 style="font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.1em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
+        <i class="ph-fill ph-notebook" style="color:#34d399;"></i> Notas Privadas
+      </h3>
+      <textarea id="crmNoteInput" rows="4" placeholder="Ej. Prefiere el degradado muy bajo, no usar navaja..." style="width:100%; background:#1f2937; border:1px solid #374151; border-radius:.75rem; padding:.75rem; font-size:.875rem; color:#fff; resize:none; outline:none; transition:border-color .2s; box-sizing:border-box; font-family:inherit;"
+        onfocus="this.style.borderColor='#34d399'" onblur="this.style.borderColor='#374151'"></textarea>
+      <button onclick="saveCRMNote()" style="margin-top:.75rem; width:100%; background:rgba(255,255,255,.05); border:1px solid #374151; border-radius:.75rem; color:#d1d5db; font-weight:700; padding:.75rem; cursor:pointer; font-size:.875rem; display:flex; align-items:center; justify-content:center; gap:.5rem; transition:all .2s; font-family:inherit;"
+        onmouseover="this.style.background='#34d399'; this.style.color='#111827'; this.style.borderColor='#34d399';"
+        onmouseout="this.style.background='rgba(255,255,255,.05)'; this.style.color='#d1d5db'; this.style.borderColor='#374151';">
+        <i class="ph-bold ph-floppy-disk"></i> Guardar Nota
+      </button>
+    </div>
+  </div>
+</div>
+
 
 </div><!-- /adminApp -->
 </body>
