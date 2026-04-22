@@ -47,7 +47,7 @@
   async function getBookingsForDate(tenantId, date) {
     try {
       if (typeof db === 'undefined') return [];
-      const snap = await db.collection('tenants').doc(tenantId).collection('bookings')
+      const snap = await db.collection('tenants').doc(tenantId).collection('citas')
         .where('date', '==', date)
         .get();
 
@@ -201,6 +201,7 @@
     const selectedService = services.find(item => String(item.id) === String(bookingData.serviceId || draft.serviceId));
 
     const payload = {
+      // --- New SaaS Schema ---
       tenantId,
       professionalId,
       professionalNameSnapshot: assignedProfessional?.displayName || draft.professionalName || '',
@@ -216,9 +217,18 @@
         ? firebase.firestore.FieldValue.serverTimestamp()
         : new Date().toISOString(),
       source: 'web',
+      
+      // --- Legacy Schema (Compatibilidad con gestion-interna.html) ---
+      clienteNombre: bookingData.customerData?.name || '',
+      clienteTelefono: bookingData.customerData?.phone || '',
+      servicioNombre: bookingData.serviceNameSnapshot || draft.serviceName || selectedService?.nombre || '',
+      hora: startTime,
+      fecha: date,
+      barberoId: professionalId,
+      estado: 'agendado',
     };
 
-    const ref = await db.collection('tenants').doc(tenantId).collection('bookings').add(payload);
+    const ref = await db.collection('tenants').doc(tenantId).collection('citas').add(payload);
 
     window.AppStore?.set('currentBookingDraft', {
       ...draft,

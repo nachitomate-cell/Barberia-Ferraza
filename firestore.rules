@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════
+
+    function isSuperAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'ignaciiio.mate@gmail.com' ||
+        request.auth.token.email == 'barrazanicolasfabian@gmail.com'
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // COLECCIONES RAÍZ (Ferraza — compatibilidad con producción)
+    // IMPORTANTE: No tocar estas reglas. La app pública de Ferraza
+    // depende de ellas. Los clientes NO están logueados.
+    // ════════════════════════════════════════════════════════════════
+
+    // Servicios: lectura pública, escritura solo admin
+    match /servicios/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Configuración: lectura pública (para horarios), escritura solo admin
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Citas: lectura pública (para ver disponibilidad), escritura pública
+    // (clientes sin cuenta pueden agendar). Admin puede borrar/editar.
+    match /citas/{docId} {
+      allow read: if true;
+      allow create: if true;         // Clientes públicos pueden agendar
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Bloqueos: lectura pública (para mostrar días no disponibles)
+    match /bloqueos/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Premios: lectura pública, escritura solo admin
+    match /premios/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Lookbook: completamente público
+    match /lookbook/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Usuarios/Clientes con cuenta: solo admin puede gestionar
+    match /users/{userId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // MOTOR SAAS MULTI-TENANT: tenants/{tenantId}/...
+    // Cada local tiene sus propias subcolecciones aisladas.
+    // ════════════════════════════════════════════════════════════════
+
+    match /tenants/{tenantId} {
+      // Cualquier usuario autenticado puede leer el perfil del tenant
+      // (necesario para el Kill Switch y verificación de licencia)
+      allow read: if request.auth != null;
+      // Solo Super Admin puede crear/modificar tenants
+      allow write: if isSuperAdmin();
+
+      // ── Subcolecciones del tenant ────────────────────────────────
+
+      // Servicios del local: lectura pública, escritura admin
+      match /servicios/{docId} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+      }
+
+      // Configuración del local: lectura pública, escritura admin
+      match /configuracion/{docId} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+      }
+
+      // Citas del local: igual que las raíz. Clientes pueden agendar.
+      match /citas/{docId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if isSuperAdmin();
+      }
+
+      // Bloqueos del local: lectura pública
+      match /bloqueos/{docId} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+      }
+
+      // Premios del local: lectura pública
+      match /premios/{docId} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+      }
+
+      // Lookbook del local: público
+      match /lookbook/{docId} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+      }
+
+      // Clientes del local: solo admin
+      match /users/{docId} {
+        allow read, write: if isSuperAdmin();
+      }
+
+      // Licencia del local (config/license): solo admin
+      match /config/{docId} {
+        allow read: if request.auth != null;
+        allow write: if isSuperAdmin();
+      }
+    }
+  }
+}

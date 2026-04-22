@@ -10,14 +10,18 @@
    ════════════════════════════════════════════════════════════════ */
 const FDB = (() => {
 
-  // Nombres canónicos de colecciones
+  const _getTenantId = () => window.TenantResolver ? window.TenantResolver.resolveTenant().tenantId : 'ferraza';
+
+  // Nombres canónicos de colecciones con soporte Multi-Tenant (SaaS)
+  // 'ferraza' usa las colecciones raíz por compatibilidad con los datos antiguos.
+  // Los nuevos tenants usan la subcolección dentro de 'tenants/{id}/...'
   const COL = {
-    CITAS:     'citas',
-    SERVICIOS: 'servicios',
-    CONFIG:    'configuracion',
-    USERS:     'users',
-    BLOQUEOS:  'bloqueos',
-    PREMIOS:   'premios',
+    get CITAS()     { return _getTenantId() === 'ferraza' ? 'citas' : `tenants/${_getTenantId()}/citas`; },
+    get SERVICIOS() { return _getTenantId() === 'ferraza' ? 'servicios' : `tenants/${_getTenantId()}/servicios`; },
+    get CONFIG()    { return _getTenantId() === 'ferraza' ? 'configuracion' : `tenants/${_getTenantId()}/configuracion`; },
+    get BLOQUEOS()  { return _getTenantId() === 'ferraza' ? 'bloqueos' : `tenants/${_getTenantId()}/bloqueos`; },
+    get PREMIOS()   { return _getTenantId() === 'ferraza' ? 'premios' : `tenants/${_getTenantId()}/premios`; },
+    get USERS()     { return 'users'; },
   };
 
   const configRef = () => db.collection(COL.CONFIG).doc('main');

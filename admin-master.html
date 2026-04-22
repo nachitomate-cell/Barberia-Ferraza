@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Master Admin | SaaS Command Center</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Usa la misma salida de Tailwind CSS -->
+  <link href="/output.css" rel="stylesheet">
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  
+  <!-- Super Admin Service -->
+  <script src="js/services/super-admin.service.js"></script>
+
+  <style>
+    body {
+      background-color: #030014; /* Fondo ultra oscuro con matiz morado */
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Acentos Cyberpunk/Tech */
+    .text-cyan-neon {
+      color: #00f0ff;
+      text-shadow: 0 0 5px rgba(0, 240, 255, 0.4), 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+    .text-purple-neon {
+      color: #b026ff;
+      text-shadow: 0 0 5px rgba(176, 38, 255, 0.4);
+    }
+    .border-cyan-neon {
+      border-color: #00f0ff;
+      box-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+    }
+    .bg-cyan-neon {
+      background-color: #00f0ff;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+    }
+    
+    .panel-glass {
+      background: rgba(15, 10, 30, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(176, 38, 255, 0.2);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    #appContent {
+      display: none; /* Oculto hasta que pase la verificación de admin */
+    }
+    #loadingScreen {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen relative overflow-x-hidden">
+
+  <!-- Efecto de fondo sutil -->
+  <div class="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[100px] pointer-events-none"></div>
+  <div class="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+  <!-- Pantalla de carga de autenticación -->
+  <div id="loadingScreen" class="fixed inset-0 z-50 flex-col items-center justify-center bg-[#030014]">
+    <i class="ph-bold ph-circle-notch text-5xl text-cyan-neon animate-spin mb-4"></i>
+    <p class="font-semibold tracking-widest text-sm text-gray-400 uppercase">Verificando credenciales...</p>
+  </div>
+
+  <div id="appContent" class="relative z-10 max-w-6xl mx-auto px-4 py-8">
+    
+    <!-- Cabecera -->
+    <header class="flex justify-between items-center mb-10 pb-6 border-b border-purple-500/30">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <i class="ph-fill ph-planet text-cyan-neon text-4xl"></i>
+          SaaS <span class="text-purple-neon">Command Center</span>
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">Gestión global de inquilinos y licencias.</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <p class="text-sm font-bold text-white" id="adminEmailDisplay"></p>
+          <p class="text-xs text-cyan-neon uppercase tracking-widest">Master Admin</p>
+        </div>
+        <button onclick="logout()" class="w-10 h-10 rounded-full panel-glass flex items-center justify-center hover:border-cyan-neon hover:text-cyan-neon transition-all">
+          <i class="ph-bold ph-sign-out text-xl"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main>
+      <div class="flex justify-between items-end mb-6">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="ph-fill ph-buildings text-purple-400"></i> Locales Activos
+        </h2>
+        <button onclick="loadTenants()" class="text-sm font-semibold text-cyan-neon hover:text-white transition-colors flex items-center gap-1">
+          <i class="ph-bold ph-arrows-clockwise"></i> Recargar
+        </button>
+      </div>
+
+      <!-- Tabla de Tenants -->
+      <div class="panel-glass rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-purple-500/20 bg-purple-900/10 text-xs uppercase tracking-widest text-gray-400">
+                <th class="p-4 font-semibold">Local (Tenant ID)</th>
+                <th class="p-4 font-semibold">Sillas (Límite)</th>
+                <th class="p-4 font-semibold">Estado de Cuenta</th>
+                <th class="p-4 font-semibold">Módulos</th>
+                <th class="p-4 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <input type="hidden" id="toast-message" value="">
+            <tbody id="tenantsTableBody" class="divide-y divide-purple-500/10 text-sm">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Pantalla de Login -->
+  <div id="loginScreen" class="fixed inset-0 z-40 hidden flex-col items-center justify-center bg-[#030014]">
+    <div class="panel-glass p-8 rounded-2xl w-full max-w-sm text-center">
+      <i class="ph-fill ph-planet text-cyan-neon text-5xl mb-4"></i>
+      <h2 class="text-2xl font-bold text-white mb-2">Master Admin</h2>
+      <p class="text-gray-400 text-sm mb-6">Acceso restringido a dueños.</p>
+      
+      <input type="email" id="masterEmail" placeholder="Correo electrónico" class="w-full bg-[#0a0a0d] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-neon mb-4">
+      <input type="password" id="masterPassword" placeholder="Contraseña" class="w-full bg-[#0a0a0d] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-neon mb-6">
+      
+      <p id="masterLoginError" class="text-red-500 text-xs font-bold hidden mb-4"></p>
+      
+      <button onclick="masterLogin()" class="w-full bg-cyan-900/30 hover:bg-cyan-neon hover:text-[#030014] border border-cyan-neon text-cyan-neon font-bold py-3 rounded-xl transition-all uppercase tracking-widest text-sm">
+        Ingresar
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 panel-glass border-cyan-neon px-6 py-3 rounded-xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <i class="ph-fill ph-check-circle text-cyan-neon text-xl"></i>
+    <span id="toastText" class="font-semibold text-white text-sm"></span>
+  </div>
+
+  <script>
+    const ADMIN_EMAILS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
+
+    // 1. Verificación de Seguridad
+    firebase.auth().onAuthStateChanged((user) => {
+      const loading = document.getElementById('loadingScreen');
+      const content = document.getElementById('appContent');
+      const loginScreen = document.getElementById('loginScreen');
+      const emailDisplay = document.getElementById('adminEmailDisplay');
+
+      if (user && ADMIN_EMAILS.includes(user.email)) {
+        // Acceso concedido
+        loading.style.display = 'none';
+        loginScreen.classList.add('hidden');
+        loginScreen.classList.remove('flex');
+        content.style.display = 'block';
+        emailDisplay.textContent = user.email;
+        loadTenants(); // Cargar los datos
+      } else {
+        // Mostrar Login
+        loading.style.display = 'none';
+        content.style.display = 'none';
+        loginScreen.classList.remove('hidden');
+        loginScreen.classList.add('flex');
+      }
+    });
+
+    async function masterLogin() {
+      const email = document.getElementById('masterEmail').value.trim();
+      const pwd = document.getElementById('masterPassword').value;
+      const errEl = document.getElementById('masterLoginError');
+      errEl.classList.add('hidden');
+
+      if (!ADMIN_EMAILS.includes(email)) {
+        errEl.textContent = 'Correo no autorizado para Master Admin.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        await firebase.auth().signInWithEmailAndPassword(email, pwd);
+      } catch (error) {
+        errEl.textContent = 'Credenciales incorrectas: ' + error.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      firebase.auth().signOut();
+    }
+
+    // 2. Lógica del Dashboard
+    async function loadTenants() {
+      const tbody = document.getElementById('tenantsTableBody');
+      tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500"><i class="ph-bold ph-spinner animate-spin text-2xl mb-2"></i><br>Cargando locales...</td></tr>';
+      
+      const tenants = await SuperAdminService.fetchAllTenants();
+      
+      if (tenants.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">No hay locales registrados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      tenants.forEach(t => {
+        const license = t.license || { limite_sillas: 1, estado_cuenta: 'activo', features: {} };
+        const features = license.features || {};
+        // Fallback: loyalty_program = true si el campo no existe (no romper locales antiguos)
+        const loyaltyOn = features.loyalty_program !== false;
+        
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-purple-900/10 transition-colors';
+        
+        row.innerHTML = `
+          <td class="p-4">
+            <p class="font-bold text-white text-base">${t.displayName}</p>
+            <p class="text-xs text-gray-500">ID: <span class="text-cyan-neon">${t.id}</span></p>
+          </td>
+          <td class="p-4">
+            <div class="flex items-center gap-2">
+              <i class="ph-fill ph-chair text-gray-400"></i>
+              <input type="number" id="sillas-${t.id}" value="${license.limite_sillas || 1}" min="1" max="20" 
+                     class="w-16 bg-[#030014] border border-purple-500/30 rounded px-2 py-1 text-white focus:outline-none focus:border-cyan-neon focus:ring-1 focus:ring-cyan-neon text-center font-bold">
+            </div>
+          </td>
+          <td class="p-4">
+            <select id="estado-${t.id}" class="bg-[#030014] border ${license.estado_cuenta === 'activo' ? 'border-green-500/50 text-green-400' : 'border-red-500/50 text-red-400'} rounded-lg px-3 py-1.5 focus:outline-none font-semibold text-xs uppercase tracking-wider cursor-pointer">
+              <option value="activo" ${license.estado_cuenta === 'activo' ? 'selected' : ''} class="text-green-400">Activo</option>
+              <option value="suspendido" ${license.estado_cuenta === 'suspendido' ? 'selected' : ''} class="text-red-400">Suspendido</option>
+            </select>
+          </td>
+          <td class="p-4">
+            <label class="flex flex-col items-center gap-1 cursor-pointer group" title="Programa de fidelidad (sellos/puntos)">
+              <span class="text-[10px] font-semibold uppercase tracking-widest ${loyaltyOn ? 'text-cyan-neon' : 'text-gray-500'} group-hover:text-white transition-colors">Fidelidad</span>
+              <div class="relative">
+                <input type="checkbox" id="loyalty-${t.id}" class="sr-only" ${loyaltyOn ? 'checked' : ''}>
+                <div id="loyalty-track-${t.id}" class="w-10 h-5 rounded-full transition-all duration-300 ${loyaltyOn ? 'bg-cyan-neon/30 border border-cyan-neon' : 'bg-gray-700 border border-gray-600'}"></div>
+                <div id="loyalty-thumb-${t.id}" class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow transition-all duration-300 ${loyaltyOn ? 'translate-x-5 bg-cyan-400' : 'bg-gray-500'}"></div>
+              </div>
+            </label>
+          </td>
+          <td class="p-4 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <a href="/${t.id}/admin" target="_blank" class="bg-purple-900/30 hover:bg-purple-neon hover:text-white border border-purple-neon text-purple-neon font-bold py-1.5 px-4 rounded-lg transition-all text-xs uppercase tracking-wider flex items-center gap-2">
+                <i class="ph-bold ph-arrow-square-out"></i> Entrar
+              </a>
+              <button onclick="saveTenant('${t.id}')" class="bg-cyan-900/30 hover:bg-cyan-neon hover:text-[#030014] border border-cyan-neon text-cyan-neon font-bold py-1.5 px-4 rounded-lg transition-all text-xs uppercase tracking-wider flex items-center gap-2">
+                <i class="ph-bold ph-floppy-disk"></i> Guardar
+              </button>
+            </div>
+          </td>
+        `;
+        
+        // Efecto visual al cambiar el select de estado
+        const selectEl = row.querySelector(`#estado-${t.id}`);
+        selectEl.addEventListener('change', (e) => {
+          if(e.target.value === 'activo') {
+            e.target.className = 'bg-[#030014] border border-green-500/50 text-green-400 rounded-lg px-3 py-1.5 focus:outline-none font-semibold text-xs uppercase tracking-wider cursor-pointer';
+          } else {
+            e.target.className = 'bg-[#030014] border border-red-500/50 text-red-400 rounded-lg px-3 py-1.5 focus:outline-none font-semibold text-xs uppercase tracking-wider cursor-pointer';
+          }
+        });
+
+        // Toggle visual de Fidelidad
+        const loyaltyCheckbox = row.querySelector(`#loyalty-${t.id}`);
+        loyaltyCheckbox.addEventListener('change', (e) => {
+          const on = e.target.checked;
+          const track = document.getElementById(`loyalty-track-${t.id}`);
+          const thumb = document.getElementById(`loyalty-thumb-${t.id}`);
+          const label = track.closest('label').querySelector('span');
+          track.className = `w-10 h-5 rounded-full transition-all duration-300 ${on ? 'bg-cyan-neon/30 border border-cyan-neon' : 'bg-gray-700 border border-gray-600'}`;
+          thumb.className = `absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow transition-all duration-300 ${on ? 'translate-x-5 bg-cyan-400' : 'bg-gray-500'}`;
+          label.className = `text-[10px] font-semibold uppercase tracking-widest transition-colors ${on ? 'text-cyan-neon' : 'text-gray-500'} group-hover:text-white`;
+        });
+
+        tbody.appendChild(row);
+      });
+    }
+
+    async function saveTenant(tenantId) {
+      const btn = event.currentTarget;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i>';
+      btn.disabled = true;
+
+      const limite_sillas = parseInt(document.getElementById(`sillas-${tenantId}`).value) || 1;
+      const estado_cuenta = document.getElementById(`estado-${tenantId}`).value;
+      const loyalty_program = document.getElementById(`loyalty-${tenantId}`)?.checked !== false;
+
+      await SuperAdminService.updateTenantLicense(tenantId, {
+        limite_sillas,
+        estado_cuenta,
+        features: { loyalty_program }
+      });
+
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        showToast(`✅ ${tenantId}: Licencia actualizada`);
+      }, 400);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').textContent = message;
+      
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

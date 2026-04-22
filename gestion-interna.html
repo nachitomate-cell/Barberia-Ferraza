@@ -11,9 +11,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Base href para forzar que los scripts siempre carguen desde la raíz, sin importar si hay slashes extra en la URL -->
+  <base href="/">
+
   <link href="/output.css" rel="stylesheet">
-  <script src="config.js"></script>
-  <script src="db.js"></script>
+  <script src="/config.js"></script>
+  <script src="/db.js"></script>
   <!-- Después de firebase-config.js se carga firebaseUtils -->
 
 
@@ -22,9 +26,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebaseUtils.js"></script>
-
+  <script src="/firebase-config.js"></script>
+  <script src="/firebaseUtils.js"></script>
+  
+  <!-- SaaS Engine Scripts -->
+  <script src="/js/app/store.js"></script>
+  <script src="/js/config/app.config.js"></script>
+  <script src="/js/config/tenant-resolver.js"></script>
+  <script src="/js/services/tenant.service.js"></script>
+  <script src="/js/services/professional.service.js"></script>
 
   <style>
     body {
@@ -36,6 +46,47 @@
     /* Toggle switch */
     .toggle-thumb {
       transition: transform 0.2s;
+    }
+
+    /* ── BOOKING SLOT ESTADOS ─────────────────────────────── */
+    .slot-booked-Confirmada, .slot-booked-agendado {
+      background: linear-gradient(90deg, rgba(16,185,129,0.08) 0%, transparent 100%);
+      border-left: 3px solid #10b981;
+    }
+    .slot-booked-Pendiente {
+      background: linear-gradient(90deg, rgba(245,158,11,0.08) 0%, transparent 100%);
+      border-left: 3px solid #f59e0b;
+    }
+    .slot-booked-Completada {
+      background: linear-gradient(90deg, rgba(99,102,241,0.06) 0%, transparent 100%);
+      border-left: 3px solid #6366f1;
+      opacity: 0.7;
+    }
+    .slot-booked-Cancelada, .slot-booked-NoAsistio {
+      background: transparent;
+      border-left: 3px solid #374151;
+      opacity: 0.4;
+    }
+    /* Glow pulso para la cita que viene en la próxima hora */
+    @keyframes bookingGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+      50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.15), inset 0 0 20px rgba(16,185,129,0.05); }
+    }
+    .slot-upcoming-glow {
+      animation: bookingGlow 2.5s ease-in-out infinite;
+    }
+    /* ── WIDGET PRÓXIMAS CITAS ───────────────────────────── */
+    #upcomingWidget {
+      background: linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(0,0,0,0) 100%);
+    }
+    .upcoming-card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .upcoming-card:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(16,185,129,0.3);
     }
 
     /* Drag & drop servicios */
@@ -323,7 +374,18 @@
           Ingresar
         </button>
       </div>
+      </div>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+     KILL SWITCH OVERLAY — Pantalla de bloqueo si la cuenta está suspendida
+  ══════════════════════════════════════ -->
+  <div id="killSwitchOverlay" class="hidden fixed inset-0 z-[10000] flex-col items-center justify-center bg-[#030014] px-4 text-center">
+    <i class="ph-bold ph-warning-octagon text-red-500 text-6xl mb-4"></i>
+    <h1 class="text-2xl font-bold text-white mb-2">Cuenta Suspendida</h1>
+    <p class="text-gray-400 max-w-sm mb-6">Tu cuenta ha sido suspendida. Por favor, contacta a soporte para regularizar tu suscripción y recuperar el acceso a tu panel.</p>
+    <button onclick="firebase.auth().signOut().then(() => { const tid = (window.TenantResolver && window.TenantResolver.resolveTenant().tenantId) || 'ferraza'; window.location.href = '/' + tid; })" class="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-6 rounded-xl transition-colors">Volver al inicio</button>
   </div>
 
   <!-- Contenido principal (oculto hasta login) -->
@@ -370,7 +432,9 @@
         <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
           <button onclick="openTab('tab-citas',this)"
             class="nav-btn w-full flex items-center gap-3 bg-admin-accent/10 text-admin-accent px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
-            <i class="ph-fill ph-calendar-check text-lg"></i> Citas de la Agenda
+            <i class="ph-fill ph-calendar-check text-lg"></i>
+            <span class="flex-1 text-left">Citas de la Agenda</span>
+            <span id="citasBadge" class="hidden min-w-[20px] h-5 text-[10px] font-bold px-1.5 rounded-full bg-admin-accent text-admin-bg flex items-center justify-center">0</span>
           </button>
           <button onclick="openTab('tab-servicios',this)"
             class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
@@ -388,10 +452,14 @@
             class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
             <i class="ph ph-images text-lg"></i> Lookbook
           </button>
+          <button onclick="openTab('tab-profesionales',this)"
+            class="nav-btn w-full flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 min-h-[44px] rounded-xl font-semibold text-sm transition-colors">
+            <i class="ph ph-scissors text-lg"></i> Profesionales
+          </button>
         </nav>
 
         <div class="p-4 border-t border-admin-border space-y-1">
-          <button onclick="window.location.href='index.html'"
+          <button onclick="const tid = (_currentTenantId || 'ferraza'); window.location.href = '/' + tid;"
             class="flex items-center gap-3 text-gray-500 hover:text-white px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-white/5">
             <i class="ph ph-house text-lg"></i> Sitio Web
           </button>
@@ -483,13 +551,26 @@
             </div>
           </div>
 
+          <!-- ══ WIDGET: LO QUE VIENE AHORA ══ -->
+          <div id="upcomingWidget" class="mb-5 border border-admin-accent/15 rounded-2xl overflow-hidden">
+            <div class="px-5 py-3 border-b border-admin-border/50 flex items-center gap-2">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-admin-accent/20">
+                <i class="ph-fill ph-lightning text-admin-accent text-xs"></i>
+              </span>
+              <span class="text-sm font-bold text-gray-200">Lo que viene ahora</span>
+              <span class="ml-auto text-xs text-gray-600">Próximas citas confirmadas</span>
+            </div>
+            <div id="upcomingFeed" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+              <p class="text-xs text-gray-600 col-span-full text-center py-3">Sin citas próximas.</p>
+            </div>
+          </div>
+
           <!-- Timeline -->
           <div class="bg-admin-card border border-admin-border rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-admin-border flex items-center gap-2">
               <i class="ph ph-clock text-admin-accent"></i>
               <span class="text-sm font-bold text-gray-300">Línea de Tiempo</span>
-              <span class="ml-auto text-xs text-gray-600 hidden sm:block">Cambia el estado de cada cita al
-                instante</span>
+              <span class="ml-auto text-xs text-gray-600 hidden sm:block">Cambia el estado de cada cita al instante</span>
             </div>
             <div id="timeline" class="divide-y divide-admin-border/40"></div>
           </div>
@@ -771,6 +852,81 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- ══════════════════ TAB 6: PROFESIONALES ══════════════════ -->
+        <div id="tab-profesionales" class="tab-content hidden">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold tracking-tight">Gestión de Profesionales</h2>
+            <p class="text-sm text-gray-500 mt-1">Añade o activa profesionales. El límite está sujeto a tu licencia.</p>
+          </div>
+
+          <!-- Límite de Licencia Status -->
+          <div class="bg-admin-card border border-admin-border rounded-xl p-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-cyan-900/30 flex items-center justify-center border border-cyan-500/30">
+                <i class="ph-fill ph-chair text-cyan-400 text-xl"></i>
+              </div>
+              <div>
+                <p class="text-white font-bold text-sm">Límite de Sillas</p>
+                <p class="text-gray-400 text-xs">Plan actual: <span id="lblSillasPlan" class="text-cyan-400 font-bold">1</span> profesionales</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-2xl font-black text-white"><span id="lblSillasActivas">0</span> <span class="text-sm text-gray-500 font-normal">/ <span id="lblSillasMax">1</span></span></p>
+              <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Activos</p>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="md:col-span-2">
+              <div id="profesionalesAdminList" class="space-y-3">
+                <p class="text-gray-500 text-sm">Cargando profesionales...</p>
+              </div>
+            </div>
+            
+            <!-- Crear nuevo Profesional -->
+            <div class="bg-admin-card border border-admin-border rounded-2xl p-6 h-fit">
+              <h3 class="font-bold mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-user-plus text-admin-accent"></i> Nuevo Profesional
+              </h3>
+              <div class="space-y-3">
+                <input type="text" id="nprof-nombre" placeholder="Nombre del profesional"
+                  class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent">
+                
+                <select id="nprof-rol"
+                  class="w-full bg-admin-bg border border-admin-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-admin-accent">
+                  <option value="barbero">Barbero</option>
+                  <option value="esteticista">Esteticista</option>
+                  <option value="estilista">Estilista</option>
+                </select>
+
+                <button onclick="crearProfesional()"
+                  class="w-full bg-admin-accent text-admin-bg font-bold py-3 rounded-xl hover:bg-emerald-300 transition-colors text-sm flex items-center justify-center gap-2">
+                  <i class="ph-bold ph-plus"></i> Añadir y Activar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════ MODAL: UPSIDE / LÍMITE DE SILLAS ══════════════════ -->
+        <div id="upsellModal" class="hidden fixed inset-0 z-[1000] flex-col items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+          <div class="bg-admin-card border border-admin-border rounded-2xl p-8 shadow-2xl max-w-md w-full text-center relative overflow-hidden">
+            <div class="absolute top-0 right-0 pt-4 pr-6 opacity-10">
+              <i class="ph-fill ph-trend-up text-7xl text-cyan-400"></i>
+            </div>
+            <div class="w-16 h-16 rounded-full bg-cyan-900/30 flex items-center justify-center border border-cyan-500/30 mx-auto mb-4">
+              <i class="ph-fill ph-chair text-cyan-400 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">Límite Alcanzado</h2>
+            <p id="upsellMsg" class="text-gray-400 text-sm mb-6">Has alcanzado el límite de tu plan actual. Desactiva a un profesional para liberar espacio, o contacta a soporte para ampliar tu plan.</p>
+            
+            <div class="flex gap-3 justify-center">
+              <button onclick="document.getElementById('upsellModal').classList.replace('flex', 'hidden')" class="bg-admin-bg border border-admin-border hover:bg-admin-border text-white font-semibold py-2 px-6 rounded-xl transition-colors">Entendido</button>
+              <button onclick="window.open('https://wa.me/56900000000?text=Hola,%20quiero%20ampliar%20mi%20límite%20de%20sillas%20en%20el%20SaaS','_blank')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-xl transition-colors shadow-[0_0_15px_rgba(8,145,178,0.5)]">Ampliar Plan</button>
+            </div>
+          </div>
         </div>
 
       </main>
@@ -1315,15 +1471,132 @@
         const dStr = dateToLocalStr(currentAdminDate);
 
         _citasUnsub = AppState.subscribeCitasDia(dStr, citas => {
+          const isFirst = !_citasDiaCache.length && citas.length;
           _citasDiaCache = citas;
           renderTimeline();
           loadMonthlyMetrics();
+          renderUpcomingFeed();
+          updateCitasBadge();
+          _checkNewBookingSound(citas.length); // 🔔 Alerta sonora si llegó nueva cita
         });
 
         _bloqueosUnsub = FDB.onBloqueosDiaChange(dStr, bloqueos => {
           _bloqueosCache = bloqueos;
           renderTimeline();
         });
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // WIDGET: LO QUE VIENE AHORA
+      // Muestra las próximas 4 citas confirmadas (hoy o días futuros)
+      // ══════════════════════════════════════════════════════════════
+      function renderUpcomingFeed() {
+        const feedEl = document.getElementById('upcomingFeed');
+        if (!feedEl) return;
+
+        const now = new Date();
+        const todayStr = dateToLocalStr(now);
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const viewingToday = dateToLocalStr(currentAdminDate) === todayStr;
+
+        // Filtrar citas del día actual que aún no han pasado
+        let upcoming = _citasDiaCache
+          .filter(c => {
+            const estado = (c.estado || '').toLowerCase();
+            if (estado === 'cancelada' || estado === 'completada') return false;
+            if (!viewingToday) return true; // días futuros: todas
+            const mins = timeToMins(c.hora || '');
+            return mins >= nowMins - 10; // incluir cita actual en curso (margen 10 min)
+          })
+          .sort((a, b) => timeToMins(a.hora) - timeToMins(b.hora))
+          .slice(0, 4);
+
+        if (!upcoming.length) {
+          feedEl.innerHTML = '<p class="text-xs text-gray-600 col-span-full text-center py-3">Sin citas próximas. 🎉 Tienes tiempo libre.</p>';
+          return;
+        }
+
+        feedEl.innerHTML = upcoming.map(c => {
+          const waLink = c.clienteTelefono
+            ? `https://wa.me/${(c.clienteTelefono || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${c.clienteNombre} 👋, te esperamos a las ${c.hora} en ${SHOP.nombre} para tu ${c.servicioNombre}. ¡Nos vemos!`)}`
+            : null;
+          const mins = timeToMins(c.hora || '');
+          const isNow = viewingToday && mins >= nowMins - 5 && mins <= nowMins + 60;
+
+          return `
+            <div class="upcoming-card rounded-xl p-3.5 ${isNow ? 'ring-1 ring-admin-accent/40' : ''}">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-mono font-black ${isNow ? 'text-admin-accent' : 'text-white'}">${c.hora || '—'}</span>
+                ${isNow ? '<span class="text-[9px] font-bold text-admin-accent uppercase tracking-widest animate-pulse">Ahora</span>' : ''}
+              </div>
+              <p class="font-bold text-sm text-white truncate">${c.clienteNombre || '—'}</p>
+              <p class="text-xs text-gray-500 mb-3 truncate"><i class="ph ph-scissors mr-0.5"></i>${c.servicioNombre || '—'}</p>
+              ${waLink
+                ? `<a href="${waLink}" target="_blank"
+                      class="flex items-center justify-center gap-1.5 w-full text-xs font-bold text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/10 rounded-lg py-1.5 transition-all">
+                     <i class="ph-fill ph-whatsapp-logo text-sm"></i> WhatsApp
+                   </a>`
+                : '<p class="text-[10px] text-gray-700 text-center">Sin teléfono</p>'
+              }
+            </div>`;
+        }).join('');
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // BADGE: Citas nuevas en las últimas 24h
+      // ══════════════════════════════════════════════════════════════
+      function updateCitasBadge() {
+        const badge = document.getElementById('citasBadge');
+        if (!badge) return;
+
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000; // hace 24h
+        // Contar citas creadas en las últimas 24h (si tienen creadoEn como timestamp)
+        const nuevas = _citasDiaCache.filter(c => {
+          if (!c.creadoEn) return false;
+          const ts = c.creadoEn?.toMillis ? c.creadoEn.toMillis() : new Date(c.creadoEn).getTime();
+          return ts >= cutoff;
+        }).length;
+
+        if (nuevas > 0) {
+          badge.textContent = nuevas > 9 ? '9+' : String(nuevas);
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // ALERTA SONORA: Nueva cita detectada por Firestore
+      // ══════════════════════════════════════════════════════════════
+      let _prevCitasCount = 0;
+      let _notifEnabled = false;
+
+      function _playNotificationSound() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          // Nota de confirmación: Do → Mi → Sol
+          [[523.25, 0, 0.15], [659.25, 0.15, 0.15], [783.99, 0.3, 0.2]].forEach(([freq, when, dur]) => {
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + when);
+          });
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.7);
+        } catch (_) { /* WebAudio no disponible */ }
+      }
+
+      function _checkNewBookingSound(newCount) {
+        if (!_notifEnabled) { _prevCitasCount = newCount; _notifEnabled = true; return; }
+        if (newCount > _prevCitasCount) {
+          _playNotificationSound();
+          showMiniToast(`🔔 Nueva cita recibida`);
+        }
+        _prevCitasCount = newCount;
       }
 
       function statusKey(estado) {
@@ -1429,19 +1702,31 @@
             if (booking.estado === 'Completada') totalIncome += srv.precio;
             const sk = statusKey(booking.estado);
 
+            // ── Detectar si esta cita es la próxima en ocurrir (glow) ──
+            const isUpcoming = dStr === todayStr &&
+              t >= nowMins && t <= nowMins + 60 &&
+              (sk === 'Confirmada' || sk === 'Pendiente' || sk === 'agendado');
+
+            const waLink = booking.clienteTelefono
+              ? `https://wa.me/${(booking.clienteTelefono || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${booking.clienteNombre} 👋, te esperamos hoy a las ${timeStr} en ${SHOP.nombre} para tu ${booking.servicioNombre}. ¡Nos vemos!`)}`
+              : null;
+
             timelineEl.innerHTML += `
-      <div class="slot-booked-${sk} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors">
-        <span class="text-xs font-mono font-bold text-gray-400 w-12 shrink-0">${timeStr}</span>
+      <div class="slot-booked-${sk} ${isUpcoming ? 'slot-upcoming-glow' : ''} flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 transition-all">
+        <div class="flex flex-col items-center gap-0.5 shrink-0 w-12">
+          <span class="text-xs font-mono font-bold ${isUpcoming ? 'text-admin-accent' : 'text-gray-400'}">${timeStr}</span>
+          ${isUpcoming ? '<span class="text-[9px] font-bold text-admin-accent uppercase tracking-widest animate-pulse">Ahora</span>' : ''}
+        </div>
 
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2 mb-1">
             <span class="font-bold text-white text-sm">${booking.clienteNombre}</span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border badge-${sk}">${sk === 'NoAsistio' ? 'No Asistió' : sk}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border badge-${sk}">${sk === 'NoAsistio' ? 'No Asistió' : booking.estado || sk}</span>
           </div>
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
             <span><i class="ph ph-scissors mr-1"></i>${booking.servicioNombre}</span>
-            <span>$${srv.precio.toLocaleString('es-CL')}</span>
-            ${booking.clienteTelefono ? `<a href="https://wa.me/${(booking.clienteTelefono || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${booking.clienteNombre} 👋, te confirmamos tu cita en ${SHOP.nombre} para el día ${currentAdminDate.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${timeStr} para el servicio de ${booking.servicioNombre}. ¡Te esperamos!`)}" target="_blank" class="text-admin-accent hover:underline flex items-center gap-1"><i class="ph-fill ph-whatsapp-logo"></i> WP</a>` : ''}
+            <span class="text-gray-600">$${srv.precio.toLocaleString('es-CL')}</span>
+            ${waLink ? `<a href="${waLink}" target="_blank" class="text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 font-semibold"><i class="ph-fill ph-whatsapp-logo"></i> WhatsApp</a>` : ''}
           </div>
           ${booking.nota ? `<p class="text-xs text-gray-600 mt-1 italic">"${booking.nota}"</p>` : ''}
         </div>
@@ -2429,13 +2714,54 @@
       // AUTH GATE — el panel solo carga si el barbero está logueado
       // ══════════════════════════════════════════════════════════════
       let _adminInitialized = false;
+      let _currentTenantId = null;
+      let _tenantLicense = null;
 
       const ADMIN_EMAILS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
 
       firebase.auth().onAuthStateChanged(async (user) => {
         if (user && ADMIN_EMAILS.includes(user.email)) {
-          // Autenticado y autorizado: mostrar app, ocultar overlay
+          // ── 1. TENANT RESOLVER: PATH ES LA VERDAD ABSOLUTA ──────────
+          // Llamamos resolveTenant() siempre al inicio. Si la URL es
+          // /navaja/admin, extraerá 'navaja' del pathname automáticamente.
+          _currentTenantId = window.TenantResolver
+            ? window.TenantResolver.resolveTenant().tenantId
+            : 'ferraza';
+          
+          // ── 2. KILL SWITCH: verificar licencia ANTES de mostrar datos ──
+          // Ocultamos todo antes de consultar Firestore para evitar
+          // que datos sensibles sean visibles aunque sea un instante.
           document.getElementById('loginOverlay').classList.add('hidden');
+          document.getElementById('adminApp').classList.add('hidden');
+          document.getElementById('killSwitchOverlay').classList.add('hidden');
+          document.getElementById('killSwitchOverlay').classList.remove('flex');
+
+          try {
+            const tenantDoc = await db.collection('tenants').doc(_currentTenantId).get();
+            if (tenantDoc.exists) {
+              const data = tenantDoc.data();
+              _tenantLicense = data.license || {};
+
+              if (_tenantLicense.estado_cuenta === 'suspendido') {
+                // Cuenta suspendida → mostrar Kill Switch, nada más
+                document.getElementById('killSwitchOverlay').classList.remove('hidden');
+                document.getElementById('killSwitchOverlay').classList.add('flex');
+                return; // ⛔ Detener aquí
+              }
+
+              // ── 3. FEATURE TOGGLE: Fidelidad ───────────────────────
+              // Si loyalty_program es false, ocultamos pestañas/secciones
+              // de sellos, premios e historial de fidelidad.
+              const loyaltyEnabled = _tenantLicense.features?.loyalty_program !== false; // fallback: true
+              _applyLoyaltyFeatureToggle(loyaltyEnabled);
+            }
+          } catch(e) {
+            // Si falla la lectura de licencia, mostramos el panel de todas formas
+            // (fail-open para que el admin no quede bloqueado por error de red)
+            console.warn('[KillSwitch] No se pudo verificar licencia, continuando:', e.message);
+          }
+
+          // ── 4. ACCESO CONCEDIDO: mostrar panel ──────────────────────
           document.getElementById('adminApp').classList.remove('hidden');
 
           if (!_adminInitialized) {
@@ -2447,6 +2773,8 @@
           // No autenticado: mostrar overlay, ocultar app
           document.getElementById('loginOverlay').classList.remove('hidden');
           document.getElementById('adminApp').classList.add('hidden');
+          document.getElementById('killSwitchOverlay').classList.add('hidden');
+          document.getElementById('killSwitchOverlay').classList.remove('flex');
         }
       });
 
@@ -2480,8 +2808,17 @@
       }
 
       // Allow Enter key in login form
-      document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('loginShopName').textContent = SHOP.nombre;
+      document.addEventListener('DOMContentLoaded', async () => {
+        // Cargar datos estéticos del login según el tenant
+        let tId = 'ferraza';
+        if (window.TenantResolver) {
+          const res = window.TenantResolver.resolveTenant();
+          tId = res.tenantId;
+        }
+        
+        const config = await window.TenantService.fetchTenantConfig(tId);
+        document.getElementById('loginShopName').textContent = config.profile.name;
+        
         ['loginEmail', 'loginPassword'].forEach(id => {
           document.getElementById(id).addEventListener('keydown', e => {
             if (e.key === 'Enter') adminLogin();
@@ -2490,17 +2827,86 @@
       });
 
       // ══════════════════════════════════════════════════════════════
+      // FEATURE TOGGLE: PROGRAMA DE FIDELIDAD
+      // Oculta/muestra secciones de sellos y premios según la licencia.
+      // ══════════════════════════════════════════════════════════════
+      function _applyLoyaltyFeatureToggle(enabled) {
+        // IDs de pestañas y botones relacionados con fidelidad
+        const loyaltyTabIds    = ['tab-clientes']; // pestaña Clientes tiene sección de sellos
+        const loyaltySelectors = [
+          '[data-loyalty]',         // elementos con atributo data-loyalty
+          '#tab-btn-sellos',        // botón pestaña Sellos (si existe)
+          '#tab-btn-premios',       // botón pestaña Premios
+          '#selloToast',            // toast de sellos
+          '.sello-action',          // botones de sumar/restar sellos
+          '.premios-section',       // sección de premios
+          '#stampSection',          // sección de stamps dentro del panel cliente
+          '#premiosAdminSection',   // sección admin de premios
+        ];
+
+        loyaltySelectors.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => {
+            if (enabled) {
+              el.classList.remove('saas-hidden-feature');
+            } else {
+              el.classList.add('saas-hidden-feature');
+            }
+          });
+        });
+
+        // Agregar CSS de ocultación si no existe
+        if (!document.getElementById('saas-feature-style')) {
+          const style = document.createElement('style');
+          style.id = 'saas-feature-style';
+          style.textContent = '.saas-hidden-feature { display: none !important; }';
+          document.head.appendChild(style);
+        }
+
+        if (!enabled) {
+          console.info('[FeatureToggle] Módulo de Fidelidad DESACTIVADO para este tenant.');
+        }
+      }
+
+      // ══════════════════════════════════════════════════════════════
       // INIT ADMIN — se llama UNA vez tras login exitoso
-      // (el DOM ya cargó, así que no necesita DOMContentLoaded)
       // ══════════════════════════════════════════════════════════════
       async function _initAdmin() {
+        // Cargar configuración de SaaS
+        const config = await window.TenantService.fetchTenantConfig(_currentTenantId);
+        const shopProfile = config.profile;
+
+        // ── Real-time Kill Switch (SaaS Enforcement) ────────────────
+        db.collection('tenants').doc(_currentTenantId).onSnapshot(snap => {
+          if (snap.exists) {
+            const data = snap.data();
+            if (data.license) {
+              _tenantLicense = data.license;
+              if (_tenantLicense.estado_cuenta === 'suspendido') {
+                // Suspender panel en tiempo real
+                document.getElementById('adminApp').classList.add('hidden');
+                document.getElementById('killSwitchOverlay').classList.remove('hidden');
+                document.getElementById('killSwitchOverlay').classList.add('flex');
+                
+                // Ocultar overlays adicionales si estaban abiertos
+                document.getElementById('clientPanel').classList.remove('open');
+                document.getElementById('panelOverlay').classList.remove('open');
+              } else {
+                // Recuperar acceso si el admin pagó
+                document.getElementById('killSwitchOverlay').classList.add('hidden');
+                document.getElementById('killSwitchOverlay').classList.remove('flex');
+                document.getElementById('adminApp').classList.remove('hidden');
+              }
+            }
+          }
+        });
+
         // ── Branding ────────────────────────────────────────────────
-        document.title = `Panel Admin | ${SHOP.nombre}`;
-        document.getElementById('shopLogoMobile').src = SHOP.logo;
-        document.getElementById('shopLogoMobile').alt = SHOP.nombreCorto;
-        document.getElementById('shopLogoSidebar').src = SHOP.logo;
-        document.getElementById('shopLogoSidebar').alt = SHOP.nombreCorto;
-        document.getElementById('shopNombreSidebar').textContent = SHOP.nombre;
+        document.title = `Panel Admin | ${shopProfile.name}`;
+        document.getElementById('shopLogoMobile').src = shopProfile.logoUrl || shopProfile.shopCompat?.logo;
+        document.getElementById('shopLogoMobile').alt = shopProfile.shortName;
+        document.getElementById('shopLogoSidebar').src = shopProfile.logoUrl || shopProfile.shopCompat?.logo;
+        document.getElementById('shopLogoSidebar').alt = shopProfile.shortName;
+        document.getElementById('shopNombreSidebar').textContent = shopProfile.name;
 
         // ── AppState: migración + suscripciones en tiempo real ──────
         AppState.subscribe('servicios', srvs => {
@@ -2530,6 +2936,7 @@
         _resubscribeCitas();
         loadMonthlyMetrics();
         initLookbookAdmin();
+        initProfesionalesAdmin();
       }
 
       // ══════════════════════════════════════════════════════════════
@@ -2671,6 +3078,140 @@
           showMiniToast('Error: ' + err.message);
         }
       }
+
+      // ══════════════════════════════════════════════════════════════
+      //  GESTIÓN DE PROFESIONALES (CON VALIDACIÓN DE LICENCIA)
+      // ══════════════════════════════════════════════════════════════
+      let _profesionalesCache = [];
+
+      function initProfesionalesAdmin() {
+        if (!_currentTenantId) return;
+
+        db.collection('tenants').doc(_currentTenantId).collection('professionals').orderBy('order').onSnapshot(snap => {
+          _profesionalesCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderProfesionalesAdmin();
+        });
+      }
+
+      function renderProfesionalesAdmin() {
+        const listEl = document.getElementById('profesionalesAdminList');
+        const maxSillas = _tenantLicense?.limite_sillas || 1;
+        const activas = _profesionalesCache.filter(p => p.active !== false).length;
+
+        document.getElementById('lblSillasPlan').textContent = maxSillas;
+        document.getElementById('lblSillasMax').textContent = maxSillas;
+        document.getElementById('lblSillasActivas').textContent = activas;
+
+        if (activas >= maxSillas) {
+          document.getElementById('lblSillasActivas').classList.add('text-red-400');
+        } else {
+          document.getElementById('lblSillasActivas').classList.remove('text-red-400');
+        }
+
+        if (!_profesionalesCache.length) {
+          listEl.innerHTML = '<p class="text-gray-500 text-sm">No hay profesionales registrados.</p>';
+          return;
+        }
+
+        listEl.innerHTML = _profesionalesCache.map(p => {
+          const isActive = p.active !== false;
+          return `
+            <div class="bg-admin-bg border border-admin-border rounded-xl p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-admin-card border border-admin-border flex items-center justify-center text-gray-500 overflow-hidden">
+                  ${p.photoUrl && !p.photoUrl.startsWith('data:image/svg+xml') && !p.photoUrl.endsWith('.png') ? `<img src="${p.photoUrl}" class="w-full h-full object-cover">` : `<i class="ph-fill ph-user text-xl"></i>`}
+                </div>
+                <div>
+                  <p class="font-bold text-white text-sm">${p.displayName}</p>
+                  <p class="text-xs text-gray-500 capitalize">${p.role || 'Barbero'}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <label class="flex items-center cursor-pointer">
+                  <div class="relative">
+                    <input type="checkbox" class="sr-only" ${isActive ? 'checked' : ''} onchange="toggleProfesionalStatus('${p.id}', this.checked)">
+                    <div class="block w-10 h-6 bg-admin-card border border-admin-border rounded-full transition-colors ${isActive ? 'bg-cyan-500/20 border-cyan-500/50' : ''}"></div>
+                    <div class="dot absolute left-1 top-1 bg-gray-500 w-4 h-4 rounded-full transition-transform ${isActive ? 'transform translate-x-4 bg-cyan-400' : ''}"></div>
+                  </div>
+                  <span class="ml-2 text-xs font-semibold ${isActive ? 'text-cyan-400' : 'text-gray-500'} w-12">${isActive ? 'Activo' : 'Inactivo'}</span>
+                </label>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      async function toggleProfesionalStatus(profId, newValue) {
+        if (newValue) {
+          // Va a activar: validar límite consultando DB en tiempo real para evitar race conditions
+          const tenantDoc = await db.collection('tenants').doc(_currentTenantId).get();
+          const maxSillas = tenantDoc.data()?.license?.limite_sillas || 1;
+          
+          const profsSnap = await db.collection('tenants').doc(_currentTenantId).collection('professionals').where('active', '==', true).get();
+          const activas = profsSnap.size;
+          
+          if (activas >= maxSillas) {
+            // Revertir switch en UI porque falló la validación
+            renderProfesionalesAdmin(); 
+            // Mostrar modal de Upsell
+            document.getElementById('upsellMsg').textContent = `Has alcanzado el límite de tu plan actual (${maxSillas} profesionales activos). Desactiva a un profesional para liberar espacio, o contacta a soporte para ampliar tu plan.`;
+            document.getElementById('upsellModal').classList.replace('hidden', 'flex');
+            return;
+          }
+        }
+
+        try {
+          await db.collection('tenants').doc(_currentTenantId).collection('professionals').doc(profId).update({
+            active: newValue
+          });
+          showMiniToast(newValue ? 'Profesional activado' : 'Profesional desactivado');
+        } catch (error) {
+          console.error(error);
+          showMiniToast('Error al actualizar estado');
+          renderProfesionalesAdmin(); // Revertir UI en caso de error
+        }
+      }
+
+      async function crearProfesional() {
+        const nombre = document.getElementById('nprof-nombre').value.trim();
+        const role = document.getElementById('nprof-rol').value;
+
+        if (!nombre) {
+          showMiniToast('Por favor, ingresa un nombre');
+          return;
+        }
+
+        // Validar límite consultando DB en tiempo real
+        const tenantDoc = await db.collection('tenants').doc(_currentTenantId).get();
+        const maxSillas = tenantDoc.data()?.license?.limite_sillas || 1;
+        
+        const profsSnap = await db.collection('tenants').doc(_currentTenantId).collection('professionals').where('active', '==', true).get();
+        const activas = profsSnap.size;
+        
+        if (activas >= maxSillas) {
+          document.getElementById('upsellMsg').textContent = `Has alcanzado el límite de tu plan actual (${maxSillas} profesionales activos). Desactiva a un profesional para liberar espacio, o contacta a soporte para ampliar tu plan.`;
+          document.getElementById('upsellModal').classList.replace('hidden', 'flex');
+          return;
+        }
+
+        try {
+          const newOrder = _profesionalesCache.length ? Math.max(..._profesionalesCache.map(p => p.order || 0)) + 1 : 0;
+          await db.collection('tenants').doc(_currentTenantId).collection('professionals').add({
+            displayName: nombre,
+            role: role,
+            active: true,
+            order: newOrder,
+            photoUrl: ''
+          });
+
+          document.getElementById('nprof-nombre').value = '';
+          showMiniToast('Profesional añadido y activado ✓');
+        } catch (error) {
+          console.error(error);
+          showMiniToast('Error al crear profesional');
+        }
+      }
+
     </script>
 
   </div><!-- /adminApp -->
