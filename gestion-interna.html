@@ -290,7 +290,7 @@
         <p id="notifMessage" class="text-sm font-medium text-admin-accent truncate">Nombre | 15:30 | Servicio</p>
       </div>
       <button onclick="dismissNotification(event, false)" class="text-gray-500 hover:text-white transition-colors shrink-0 p-1">
-        <i class="ph-bold ph-x text-sm"></i>
+        <span class="text-sm font-bold leading-none">✕</span>
       </button>
     </div>
   </div>
@@ -400,7 +400,7 @@ function closeSidebar() {
       </div>
       <button onclick="closeSidebar()" aria-label="Cerrar menú"
         class="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors shrink-0">
-        <i class="ph-bold ph-x text-lg"></i>
+        <span class="text-lg font-bold leading-none">✕</span>
       </button>
     </div>
 
@@ -787,7 +787,7 @@ function closeSidebar() {
             class="w-full bg-admin-card border border-admin-border rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white focus:outline-none focus:border-admin-accent transition-colors">
           <button id="clearSearch" onclick="limpiarBusqueda()"
             class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
-            <i class="ph-bold ph-x text-sm"></i>
+            <span class="text-sm font-bold leading-none">✕</span>
           </button>
         </div>
         <button onclick="abrirModalNuevoCliente()"
@@ -882,7 +882,7 @@ function closeSidebar() {
     <button onclick="cerrarPanel()"
       class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white active:opacity-60 transition-colors mr-1"
       style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-      <i class="ph-bold ph-x text-xl"></i>
+      <span class="text-xl font-bold leading-none">✕</span>
     </button>
     <div id="panelAvatar"
       class="w-10 h-10 rounded-full bg-admin-bg border border-admin-border flex items-center justify-center overflow-hidden shrink-0">
@@ -1022,7 +1022,7 @@ function closeSidebar() {
 ══════════════════════════════════════════════════════ -->
 <div id="manualBookingModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-lg shadow-2xl p-6 relative overflow-y-auto">
-    <button onclick="closeManualBookingModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><i class="ph-bold ph-x text-2xl"></i></button>
+    <button onclick="closeManualBookingModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><span class="text-2xl font-bold leading-none">✕</span></button>
     <h2 class="text-xl font-bold mb-5">Nueva Cita</h2>
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
@@ -1071,7 +1071,7 @@ function closeSidebar() {
 ══════════════════════════════════════════════════════ -->
 <div id="editServiceModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
-    <button onclick="closeEditModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><i class="ph-bold ph-x text-2xl"></i></button>
+    <button onclick="closeEditModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><span class="text-2xl font-bold leading-none">✕</span></button>
     <h2 class="text-xl font-bold mb-5">Editar Servicio</h2>
     <input type="hidden" id="edit-srv-id">
     <div class="space-y-3">
@@ -1113,7 +1113,7 @@ function closeSidebar() {
 <div id="nuevoClienteModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
     <button onclick="cerrarModalNuevoCliente()" class="absolute top-5 right-5 text-gray-400 hover:text-white">
-      <i class="ph-bold ph-x text-2xl"></i>
+      <span class="text-2xl font-bold leading-none">✕</span>
     </button>
     <h2 class="text-xl font-bold mb-1">Nuevo Cliente</h2>
     <p class="text-xs text-gray-500 mb-5">Agrega un cliente directamente a la base de datos del club.</p>
@@ -1170,7 +1170,7 @@ function closeSidebar() {
         </div>
       </div>
       <button onclick="closeBloqueoModal()" class="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">
-        <i class="ph-bold ph-x text-xl"></i>
+        <span class="text-xl font-bold leading-none">✕</span>
       </button>
     </div>
 
@@ -1796,7 +1796,7 @@ function renderBloqueosDelDia() {
             </div>
             <button onclick="eliminarBloqueo('${b.id}')"
               class="shrink-0 text-xs font-bold text-red-400/60 hover:text-red-400 px-3 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/50 transition-all">
-              <i class="ph-bold ph-x text-xs mr-1"></i> Quitar
+              <span class="text-xs font-bold leading-none mr-1">✕</span> Quitar
             </button>
           </div>`).join('')}
       </div>
@@ -1997,7 +1997,7 @@ function renderBlockedDates() {
         <span class="text-sm font-semibold text-white">${d}</span>
         <span class="text-xs text-gray-500">${new Date(d+'T12:00:00').toLocaleDateString('es-CL',{weekday:'long'})}</span>
       </div>
-      <button onclick="eliminarFechaBloqueada('${d}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+      <button onclick="eliminarFechaBloqueada('${d}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"><span class="text-sm font-bold leading-none">✕</span></button>
     </div>`).join('');
 }
 function guardarIntervalo() {
@@ -3424,7 +3424,7 @@ document.addEventListener('click', function(e) {
       <p id="crmPhone" style="font-size:.8rem; color:#6b7280; font-family:monospace; margin-top:.15rem;"></p>
     </div>
     <button onclick="closeCRMDrawer()" style="width:2rem; height:2rem; border-radius:50%; background:rgba(255,255,255,.05); border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:.75rem;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
-      <i class="ph-bold ph-x" style="font-size:.9rem;"></i>
+      <span style="font-size:.9rem; font-weight:bold; line-height:1;">✕</span>
     </button>
   </div>
 
