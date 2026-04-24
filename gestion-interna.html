@@ -337,6 +337,25 @@
 <!-- Contenido principal (oculto hasta login) -->
 <div id="adminApp" class="hidden">
 
+<!-- Funciones del sidebar definidas ANTES del DOM complejo para que
+     siempre estén disponibles aunque el script principal falle -->
+<script>
+function openSidebar() {
+  var s = document.getElementById('sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.add('open');
+  if (o) o.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  var s = document.getElementById('sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.remove('open');
+  if (o) o.classList.remove('open');
+  document.body.style.overflow = '';
+}
+</script>
+
 <!-- ── Mobile Header ── -->
 <header class="md:hidden fixed top-0 left-0 right-0 h-16 bg-admin-card border-b border-admin-border flex items-center px-4 z-50 gap-3">
   <button id="hamburgerBtn" onclick="openSidebar()" aria-label="Menú"
@@ -1295,18 +1314,7 @@ function formatDate(isoStr) {
 // ══════════════════════════════════════════════════════════════
 //  SIDEBAR MÓVIL
 // ══════════════════════════════════════════════════════════════
-function openSidebar() {
-  document.getElementById('sidebar').classList.add('open');
-  document.getElementById('sidebarOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-// Hamburger via addEventListener — más confiable en iOS que onclick inline
-document.getElementById('hamburgerBtn')?.addEventListener('click', openSidebar);
+// openSidebar / closeSidebar definidos en script inline al inicio del body
 
 // ══════════════════════════════════════════════════════════════
 //  NAVEGACIÓN DE TABS
@@ -1888,15 +1896,13 @@ function buildTimeOptions(selId, selected) {
 function loadConfig() {
   const set = _configCache || {};
   document.getElementById('config-intervalo').value = set.intervaloMinutos.toString();
-  const TEL_DEFAULT = '5699426922';
-  const telActual = set.telefonoAdmin || '';
-  // Solo sobreescribir si Firestore tiene un valor; si no, dejar el default del HTML
-  if (telActual) {
-    document.getElementById('config-tel').value = telActual;
-  } else {
-    // Primera vez: guardar el default en Firestore para que persista
-    FDB.updateConfig({ telefonoAdmin: TEL_DEFAULT });
-  }
+  const TEL_REAL    = '56994269228';
+  const TEL_PLACEHOLDER = '56900000000';
+  const telGuardado = set.telefonoAdmin || '';
+  // Si está vacío o es el placeholder de ejemplo, forzar el número real
+  const telFinal = (!telGuardado || telGuardado === TEL_PLACEHOLDER) ? TEL_REAL : telGuardado;
+  document.getElementById('config-tel').value = telFinal;
+  if (telFinal !== telGuardado) FDB.updateConfig({ telefonoAdmin: telFinal });
   buildTimeOptions('break-inicio', colacion?.inicio||'14:00');
   buildTimeOptions('break-fin',    colacion?.fin   ||'15:00');
   if(colacion) document.getElementById('colacionStatus').textContent = `Colación activa: ${colacion.inicio} – ${colacion.fin}`;

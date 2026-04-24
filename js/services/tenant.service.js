@@ -23,7 +23,7 @@
           club: 'Club Ferraza',
           address: 'Av. Libertad 63 / Local 28',
           scheduleText: 'Lun a Sab 10:00 - 20:00 hrs.',
-          phone: '56900000000',
+          phone: '56994269228',
           logoUrl: 'logo.jpg',
           pageTitle: 'Agendar Hora | Barberia Ferraza',
           metaDescription: 'Reserva tu hora en Barberia Ferraza. Cortes, barba y mas. Elige tu barbero, servicio y horario en segundos.',
@@ -36,7 +36,7 @@
             logo: 'logo.jpg',
             direccion: 'Av. Libertad 63 / Local 28',
             horario: 'Lun a Sab 10:00 - 20:00 hrs.',
-            telefono: '56900000000',
+            telefono: '56994269228',
             club: 'Club Ferraza',
             barberos: [
               { nombre: 'Nicolas Fabian', foto: 'Fabian.png', disponible: true }
