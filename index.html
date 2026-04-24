@@ -28,9 +28,6 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link href="/output.css" rel="stylesheet">
 
-  <script src="js/config/app.config.js"></script>
-  <script src="js/config/tenant-resolver.js"></script>
-  <script src="js/app/store.js"></script>
   <script src="config.js"></script>
   <script src="db.js"></script>
   <!-- Firebase SDKs (compat) -->
@@ -75,184 +72,16 @@
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.4), 0 0 15px rgba(255, 255, 255, 0.2);
     }
   </style>
-  <style>
-    :root {
-      --brand-bg: #050505;
-      --brand-surface: #0a0a0d;
-      --brand-surface-alt: #1a1a24;
-      --brand-primary: #ffffff;
-      --brand-accent: #d4d4d8;
-      --brand-text: #f8fafc;
-      --brand-muted: #a1a1aa;
-      --brand-border: rgba(255, 255, 255, 0.14);
-      --brand-glow: rgba(255, 255, 255, 0.22);
-      --brand-button-text: #ffffff;
-      --brand-progress-track: #1a1a24;
-    }
-
-    body {
-      background-color: var(--brand-bg);
-      color: var(--brand-text);
-      transition: background-color 0.25s ease, color 0.25s ease;
-    }
-
-    #appShell {
-      transition: opacity 0.2s ease;
-    }
-
-    html[data-app-loading="true"] #appShell {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    html[data-app-loading="false"] #tenantLoader {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    #tenantLoader {
-      position: fixed;
-      inset: 0;
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background:
-        radial-gradient(circle at top, var(--brand-glow), transparent 45%),
-        var(--brand-bg);
-      transition: opacity 0.25s ease;
-    }
-
-    .tenant-loader-card {
-      width: min(22rem, calc(100vw - 2rem));
-      padding: 1.75rem;
-      border-radius: 1.5rem;
-      background: color-mix(in srgb, var(--brand-surface) 92%, transparent);
-      border: 1px solid var(--brand-border);
-      box-shadow: 0 0 30px var(--brand-glow);
-      text-align: center;
-      backdrop-filter: blur(12px);
-    }
-
-    .tenant-loader-spinner {
-      width: 3rem;
-      height: 3rem;
-      margin: 0 auto 1rem;
-      border-radius: 9999px;
-      border: 3px solid color-mix(in srgb, var(--brand-primary) 18%, transparent);
-      border-top-color: var(--brand-primary);
-      animation: tenantSpin 0.8s linear infinite;
-    }
-
-    @keyframes tenantSpin {
-      to { transform: rotate(360deg); }
-    }
-
-    .text-neon {
-      color: var(--brand-primary);
-      text-shadow: 0 0 5px var(--brand-glow), 0 0 10px color-mix(in srgb, var(--brand-primary) 18%, transparent);
-    }
-
-    .border-neon {
-      border-color: var(--brand-primary);
-      box-shadow: 0 0 6px var(--brand-glow), inset 0 0 6px color-mix(in srgb, var(--brand-primary) 18%, transparent);
-    }
-
-    .bg-neon {
-      background-color: var(--brand-primary);
-      box-shadow: 0 0 8px var(--brand-glow), 0 0 15px color-mix(in srgb, var(--brand-primary) 18%, transparent);
-    }
-
-    .tenant-surface {
-      background-color: var(--brand-surface) !important;
-      border-color: var(--brand-border) !important;
-    }
-
-    .tenant-progress-track {
-      background-color: var(--brand-progress-track) !important;
-      border-color: var(--brand-border) !important;
-    }
-
-    .tenant-primary-text {
-      color: var(--brand-primary) !important;
-    }
-
-    .tenant-muted {
-      color: var(--brand-muted) !important;
-    }
-
-    .service-option,
-    .time-pill,
-    .day-btn:not(.pointer-events-none),
-    #btnContinue,
-    #clubBanner a {
-      background-color: var(--brand-surface) !important;
-      border-color: var(--brand-border) !important;
-    }
-
-    #btnContinue {
-      color: var(--brand-button-text) !important;
-      box-shadow: 0 0 20px var(--brand-glow) !important;
-    }
-
-    #btnContinue:hover,
-    .service-option:hover,
-    .time-pill:hover,
-    .day-btn.active,
-    #clubBanner a:hover {
-      border-color: var(--brand-primary) !important;
-      box-shadow: 0 0 18px var(--brand-glow) !important;
-    }
-
-    #progressBar {
-      background-color: var(--brand-primary) !important;
-    }
-
-    #footerContact,
-    header {
-      border-color: var(--brand-border) !important;
-    }
-
-    header {
-      background-color: color-mix(in srgb, var(--brand-bg) 92%, transparent) !important;
-    }
-
-    #shopLogo {
-      border-color: var(--brand-primary) !important;
-      box-shadow: 0 0 20px var(--brand-glow) !important;
-    }
-
-    #shopSlogan,
-    #progressPercentage,
-    .duration-tag,
-    #waBtnLink {
-      color: var(--brand-accent) !important;
-    }
-
-    #currentMonthText,
-    #summaryService,
-    #heroSubtitle {
-      color: var(--brand-text) !important;
-    }
-  </style>
 </head>
 
 <body class="font-sans antialiased min-h-screen pb-32">
 
-  <div id="tenantLoader">
-    <div class="tenant-loader-card">
-      <div class="tenant-loader-spinner"></div>
-      <p class="text-sm font-semibold tenant-primary-text">Cargando experiencia del negocio...</p>
-      <p class="text-xs tenant-muted mt-2">Resolviendo tenant, tema y configuracion.</p>
-    </div>
-  </div>
-
-  <div id="appShell" class="max-w-md mx-auto relative overflow-hidden">
+  <div class="max-w-md mx-auto relative overflow-hidden">
 
     <header
-      class="px-6 pt-8 pb-6 flex flex-col items-center justify-center sticky top-0 backdrop-blur-md z-40 border-b block relative tenant-surface">
+      class="px-6 pt-8 pb-6 flex flex-col items-center justify-center sticky top-0 bg-[#050505]/95 backdrop-blur-md z-40 border-b border-brand-accent/10 block relative">
       <button onclick="goBack()"
-        class="absolute left-6 top-8 w-11 h-11 flex items-center justify-center rounded-full border active:scale-95 transition-transform tenant-surface tenant-primary-text">
+        class="absolute left-6 top-8 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0d] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.1)] active:scale-95 transition-transform text-brand-neon">
         <i class="ph-bold ph-arrow-left text-xl"></i>
       </button>
       <img id="shopLogo" src="" alt=""
@@ -269,17 +98,20 @@
           Servicios</span>
         <span id="progressPercentage" class="text-xs font-bold text-brand-neon/60">25%</span>
       </div>
-      <div class="w-full rounded-full h-1.5 overflow-hidden border tenant-progress-track">
+      <div class="w-full bg-[#1a1a24] rounded-full h-1.5 overflow-hidden border border-brand-accent/10">
         <div id="progressBar" class="bg-neon h-1.5 rounded-full transition-all duration-700 w-1/4 relative"></div>
       </div>
     </div>
 
     <main class="px-6 pb-6 relative min-h-[500px]">
 
-      <!-- PASO 1 -->
       <section id="step1" class="animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-        <h2 id="heroTitle" class="text-2xl font-bold mb-2 text-neon tracking-tight">¿Qué servicio buscas?</h2>
-        <p id="heroSubtitle" class="text-sm mb-6 tenant-muted">Reserva tu hora en segundos</p>
+        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">¿Qué servicio buscas?</h2>
+        
+        <!-- Category Pills -->
+        <div id="categoryPills" class="flex gap-2 overflow-x-auto pb-4 mb-4 no-scrollbar -mx-6 px-6 scroll-smooth">
+        </div>
+
         <!-- Skeleton visible mientras carga Firestore -->
         <div id="servicesSkeleton" class="grid grid-cols-2 gap-4">
           <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
@@ -373,11 +205,19 @@
           <div class="absolute inset-0 rounded-full bg-brand-neon/10 animate-ping opacity-75"></div>
           <i class="ph-fill ph-check-circle text-6xl text-neon relative z-10"></i>
         </div>
-        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva en el Sistema!</h2>
-        <p class="text-brand-neon/80 font-medium mb-10 text-[15px] leading-relaxed">Tu hora ya está guardada en la agenda, pero <strong class="text-white">debes enviar el WhatsApp</strong> que se acaba de abrir para que el barbero la apruebe definitivamente.</p>
+        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
+        
+        <!-- Contenedor Resumen Dinámico -->
+        <div class="bg-[#0a0a0d] border border-neon/30 rounded-xl p-4 mb-6 shadow-sm w-full max-w-sm mx-auto">
+          <p id="successSummaryService" class="font-bold text-brand-text text-lg leading-tight mb-2"></p>
+          <p id="successSummaryDate" class="text-neon font-medium text-sm flex items-center justify-center gap-1.5"></p>
+        </div>
+
+        <p class="text-brand-neon/80 font-medium mb-8 text-[15px] leading-relaxed">Tu espacio está 100% asegurado en nuestra agenda. Por favor, haz clic abajo para enviar un WhatsApp rápido al local y activar tus recordatorios.</p>
+        
         <a id="waBtnLink" href="#" target="_blank"
           class="w-full bg-[#25D366]/10 border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-6 hover:bg-[#25D366]/20">
-          Validar reserva por WhatsApp <i
+          Enviar WhatsApp <i
             class="ph-bold ph-whatsapp-logo text-2xl drop-shadow-[0_0_5px_rgba(37,211,102,0.8)]"></i>
         </a>
         <button onclick="window.location.reload()"
@@ -429,13 +269,6 @@
     </div>
   </div>
 
-  <script src="js/services/tenant.service.js"></script>
-  <script src="js/services/professional.service.js"></script>
-  <script src="js/services/service-catalog.service.js"></script>
-  <script src="js/services/booking.service.js"></script>
-  <script src="js/ui/theme.js"></script>
-  <script src="js/app/bootstrap.js"></script>
-
   <script>
     let currentStep = 1;
     let selectedServiceObj = null;
@@ -454,27 +287,9 @@
     // Caché local (alimentado por Firestore al iniciar)
     let _fsConfig        = null;
     let _fsServices      = [];
-    let _professionals   = [];
     let _bloqueosProximos = {}; // { "YYYY-MM-DD": true } — días con bloqueo total
 
     const _ICONS = ['ph-scissors','ph-mask-happy','ph-user-focus','ph-magic-wand','ph-sparkle','ph-star'];
-
-    function getDraft() {
-      return window.AppStore?.get('currentBookingDraft') || {};
-    }
-
-    function updateBookingDraft(partial) {
-      const current = getDraft();
-      window.AppStore?.set('currentBookingDraft', { ...current, ...partial });
-    }
-
-    function getStoreServices() {
-      return window.AppStore?.get('services') || [];
-    }
-
-    function getStoreProfessionals() {
-      return window.AppStore?.get('professionals') || [];
-    }
 
     function _renderServicesGrid(services) {
       const skeleton = document.getElementById('servicesSkeleton');
@@ -483,8 +298,9 @@
       grid.innerHTML = '';
       services.forEach((s, i) => {
         const icon = _ICONS[i % _ICONS.length];
+        const cat = s.categoria || 'Otro';
         grid.innerHTML += `
-          <button onclick="selectService(this)" data-service-id="${s.id}"
+          <button onclick="selectService(this)" data-service-id="${s.id}" data-category="${cat}"
             class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
             <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
             <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
@@ -499,40 +315,50 @@
       });
     }
 
-    function renderProfessionalsGrid() {
-      const grid = document.getElementById('barberosGrid');
-      const professionals = getStoreProfessionals();
-      const draft = getDraft();
-      const selectedId = draft.professionalId || 'any';
+    function renderCategories(services) {
+      const pillsContainer = document.getElementById('categoryPills');
+      if (!pillsContainer) return;
 
-      const anyCard = `
-        <button type="button" onclick="selectProfessional(this, 'any')" data-professional-id="any"
-          class="professional-option relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 ${selectedId === 'any' ? 'border-neon bg-brand-neon/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'border-brand-accent/20'} text-center overflow-hidden transition-all">
-          <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
-          <div class="w-20 h-20 rounded-full border border-brand-accent/30 bg-[#111115] flex items-center justify-center mb-4 relative z-10">
-            <i class="ph-fill ph-users-three text-4xl text-neon"></i>
-          </div>
-          <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">Cualquiera</span>
-          <span class="text-[13px] font-bold text-brand-neon relative z-10 mt-1">El mas proximo disponible</span>
-        </button>
-      `;
+      const categories = ['Todos'];
+      services.forEach(s => {
+        const cat = s.categoria || 'Otro';
+        if (!categories.includes(cat)) {
+          categories.push(cat);
+        }
+      });
 
-      const cards = professionals.map(prof => `
-        <button type="button" onclick="selectProfessional(this, '${prof.id}')" data-professional-id="${prof.id}"
-          class="professional-option relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 ${selectedId === prof.id ? 'border-neon bg-brand-neon/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'border-brand-accent/20'} text-center overflow-hidden transition-all">
-          <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
-          <img src="${prof.photoUrl || ''}" alt="Foto de ${prof.displayName}"
-            class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">
-          <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">${prof.displayName}</span>
-          <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
-            <i class="ph-fill ph-check-circle text-[16px]"></i>
-            ${prof.role || 'Profesional activo'}
-          </span>
-        </button>
-      `).join('');
+      pillsContainer.innerHTML = '';
+      categories.forEach((cat, index) => {
+        const isActive = index === 0;
+        const btn = document.createElement('button');
+        btn.className = `category-pill flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-bold border transition-all active:scale-95 ${isActive ? 'bg-brand-neon/10 border-neon text-neon shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'bg-[#0a0a0d] border-brand-accent/20 text-gray-400 hover:border-brand-neon/50 hover:text-gray-200'}`;
+        btn.textContent = cat;
+        btn.onclick = () => {
+          document.querySelectorAll('.category-pill').forEach(el => {
+            el.classList.remove('bg-brand-neon/10', 'border-neon', 'text-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.15)]');
+            el.classList.add('bg-[#0a0a0d]', 'border-brand-accent/20', 'text-gray-400');
+          });
+          btn.classList.add('bg-brand-neon/10', 'border-neon', 'text-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.15)]');
+          btn.classList.remove('bg-[#0a0a0d]', 'border-brand-accent/20', 'text-gray-400');
+          filterServicesByCategory(cat);
+        };
+        pillsContainer.appendChild(btn);
+      });
+    }
 
-      grid.innerHTML = anyCard + cards;
-      document.getElementById('summaryBarber').textContent = draft.professionalName || 'Cualquiera / El mas proximo';
+    function filterServicesByCategory(category) {
+      const allButtons = document.querySelectorAll('.service-option');
+      allButtons.forEach(btn => {
+        if (category === 'Todos') {
+          btn.style.display = 'flex';
+        } else {
+          if (btn.dataset.category === category) {
+            btn.style.display = 'flex';
+          } else {
+            btn.style.display = 'none';
+          }
+        }
+      });
     }
 
     // Precarga bloqueos totales de los próximos 14 días (usado en renderCalendar)
@@ -557,26 +383,20 @@
     async function initServices() {
       try {
         _fsConfig   = await FDB.getConfig();
-        _fsServices = getStoreServices();
-        _professionals = getStoreProfessionals();
-        if (!_fsServices.length) {
-          _fsServices = await FDB.getServicios();
-        }
+        _fsServices = await FDB.getServicios();
         // Fallback a localStorage si Firestore vacío
         if (!_fsServices.length) _fsServices = DB.getServices();
       } catch(e) {
         console.warn('[Reservar] Firestore no disponible, usando localStorage:', e.message);
         _fsConfig   = DB.getSettings();
-        _fsServices = getStoreServices().length ? getStoreServices() : DB.getServices();
-        _professionals = getStoreProfessionals();
+        _fsServices = DB.getServices();
       }
       // Exponer globalmente para que selectService() pueda acceder
       // desde atributos onclick (que ejecutan en scope global, no en closure)
       window._fsServices = _fsServices;
-      window._professionals = _professionals;
       await precargarBloqueos();
+      renderCategories(_fsServices);
       _renderServicesGrid(_fsServices);
-      renderProfessionalsGrid();
     }
 
     function renderCalendar() {
@@ -652,7 +472,6 @@
 
       currentDateStr = dateStr;
       selectedTimeStr = null;
-      updateBookingDraft({ date: dateStr, startTime: null, availableProfessionalIds: [] });
       renderHours();
     }
 
@@ -664,17 +483,10 @@
 
       let hours = [];
       try {
-        const draft = getDraft();
-        const tenantId = window.AppStore?.get('tenantId');
-        hours = await BookingService.getAvailableSlots(
-          tenantId,
-          currentDateStr,
-          draft.professionalId || 'any',
-          selectedServiceObj.duracion
-        );
+        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, _fsConfig);
       } catch(e) {
         // Fallback a localStorage si no hay conexión
-        console.warn('[Reservar] No se pudieron cargar slots con BookingService:', e.message);
+        hours = DB.getAvailableHours(currentDateStr, selectedServiceObj.duracion);
       }
 
       grid.innerHTML = '';
@@ -687,48 +499,9 @@
         if (h.occupied) {
           grid.innerHTML += `<button class="px-6 py-3 rounded-[1rem] border border-gray-800 bg-[#0a0a0d] text-[15px] font-medium text-gray-600 line-through pointer-events-none opacity-40 shadow-inner">${h.time}</button>`;
         } else {
-          const availableIds = (h.availableProfessionalIds || []).join('|');
-          grid.innerHTML += `<button onclick="selectTime(this, '${h.time}', '${availableIds}')" class="time-pill px-6 py-3 rounded-[1rem] border border-brand-accent/20 bg-[#0a0a0d] shadow-[0_0_5px_rgba(0,0,0,0.5)] text-[15px] font-bold text-gray-300 transition-all active:scale-95 hover:border-neon hover:shadow-[0_0_10px_rgba(255,255,255,0.15)] hover:text-neon focus:outline-none">${h.time}</button>`;
+          grid.innerHTML += `<button onclick="selectTime(this, '${h.time}')" class="time-pill px-6 py-3 rounded-[1rem] border border-brand-accent/20 bg-[#0a0a0d] shadow-[0_0_5px_rgba(0,0,0,0.5)] text-[15px] font-bold text-gray-300 transition-all active:scale-95 hover:border-neon hover:shadow-[0_0_10px_rgba(255,255,255,0.15)] hover:text-neon focus:outline-none">${h.time}</button>`;
         }
       });
-    }
-
-    function selectProfessional(btn, professionalId) {
-      document.querySelectorAll('.professional-option').forEach(el => {
-        el.classList.remove('border-neon', 'bg-brand-neon/10', 'shadow-[0_0_20px_rgba(255,255,255,0.2)]');
-        el.classList.add('border-brand-accent/20');
-      });
-
-      btn.classList.remove('border-brand-accent/20');
-      btn.classList.add('border-neon', 'bg-brand-neon/10', 'shadow-[0_0_20px_rgba(255,255,255,0.2)]');
-
-      if (professionalId === 'any') {
-        window._selectedBarber = 'Cualquiera / El mas proximo';
-        document.getElementById('summaryBarber').textContent = window._selectedBarber;
-        updateBookingDraft({
-          professionalId: 'any',
-          professionalName: 'Cualquiera / El mas proximo',
-          startTime: null,
-          availableProfessionalIds: [],
-        });
-        selectedTimeStr = null;
-        if (selectedServiceObj && currentDateStr) renderHours();
-        return;
-      }
-
-      const professional = (window._professionals || []).find(p => String(p.id) === String(professionalId));
-      if (!professional) return;
-
-      window._selectedBarber = professional.displayName;
-      document.getElementById('summaryBarber').textContent = professional.displayName;
-      updateBookingDraft({
-        professionalId: professional.id,
-        professionalName: professional.displayName,
-        startTime: null,
-        availableProfessionalIds: [professional.id],
-      });
-      selectedTimeStr = null;
-      if (selectedServiceObj && currentDateStr) renderHours();
     }
 
     function selectService(btn) {
@@ -763,20 +536,9 @@
       // Buscar en la lista global (garantizada en scope de onclick)
       selectedServiceObj = (window._fsServices || _fsServices || []).find(s => String(s.id) === String(id))
         || DB.getServices().find(s => String(s.id) === String(id));
-
-      if (selectedServiceObj) {
-        updateBookingDraft({
-          serviceId: selectedServiceObj.id,
-          serviceName: selectedServiceObj.nombre,
-          serviceDuration: selectedServiceObj.duracion,
-          startTime: null,
-          availableProfessionalIds: [],
-        });
-        selectedTimeStr = null;
-      }
     }
 
-    function selectTime(btn, time, availableIds = '') {
+    function selectTime(btn, time) {
       document.querySelectorAll('.time-pill').forEach(el => {
         el.classList.remove('bg-brand-neon/10', 'text-neon', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.25)]', 'border-2');
         el.classList.add('bg-[#0a0a0d]', 'text-gray-300', 'border-brand-accent/20', 'border');
@@ -785,11 +547,6 @@
       btn.classList.remove('bg-[#0a0a0d]', 'text-gray-300', 'border-brand-accent/20', 'border');
       btn.classList.add('bg-brand-neon/10', 'text-neon', 'border-neon', 'shadow-[0_0_15px_rgba(255,255,255,0.25)]', 'border-2');
       selectedTimeStr = time;
-      updateBookingDraft({
-        date: currentDateStr,
-        startTime: time,
-        availableProfessionalIds: availableIds ? availableIds.split('|').filter(Boolean) : [],
-      });
     }
 
     function goBack() {
@@ -884,24 +641,26 @@
 
         const email = document.getElementById('clientEmail').value.trim();
 
-        const activeShop = getActiveShopConfig();
-        const bookingDraft = getDraft();
-        const selectedProfessionalName = bookingDraft.professionalName || window._selectedBarber || 'Cualquiera / El mas proximo';
-
-        let createdBooking = null;
         try {
-          createdBooking = await BookingService.createBooking({
-            tenantId: window.AppStore?.get('tenantId'),
-            customerData: {
-              name: nombre,
-              phone: tel,
-              email,
-            },
+          await FDB.addCita({
+            fecha:            currentDateStr,
+            hora:             selectedTimeStr,
+            clienteNombre:    nombre,
+            clienteTelefono:  tel,
+            clienteEmail:     email,
+            servicioNombre:   selectedServiceObj.nombre,
+            duracionServicio: selectedServiceObj.duracion,
+            barbero:          window._selectedBarber || SHOP.barberos[0]?.nombre || '',
           });
         } catch(e) {
           // Fallback offline: guardar en localStorage
-          console.warn('[Reservar] Error creando reserva con BookingService:', e.message);
-          return alert('No pudimos guardar tu reserva. Intenta nuevamente.');
+          console.warn('[Reservar] Sin conexión, guardando en localStorage:', e.message);
+          DB.saveBooking({
+            fecha: currentDateStr, hora: selectedTimeStr,
+            clienteNombre: nombre, clienteTelefono: tel, clienteEmail: email,
+            servicioNombre: selectedServiceObj.nombre, duracionServicio: selectedServiceObj.duracion,
+            barbero: window._selectedBarber || SHOP.barberos[0]?.nombre || '',
+          });
         }
 
         // Registrar timestamp de reserva exitosa
@@ -918,20 +677,17 @@
         successEl.classList.remove('hidden');
         successEl.classList.add('flex');
 
-        const waMsg = `Hola ${activeShop.nombreCorto}! Acabo de agendar en su web. Soy ${nombre} y voy para un ${selectedServiceObj.nombre} a las ${selectedTimeStr} hrs el ${currentDateStr}. \n¿Todo ok? 💈`;
-        const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || activeShop.telefono;
+        // Poblar el resumen dinámico
+        document.getElementById('successSummaryService').textContent = selectedServiceObj.nombre;
+        const [yyyy, mm, dd] = currentDateStr.split('-');
+        document.getElementById('successSummaryDate').innerHTML = `📅 <span>${dd}/${mm}/${yyyy} a las ${selectedTimeStr} hrs</span>`;
+
+
+        const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar en su web. Soy ${nombre} y voy para un ${selectedServiceObj.nombre} a las ${selectedTimeStr} hrs el ${currentDateStr}. \n¿Todo ok? 💈`;
+        const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;
         const limpio = String(numBarbero).replace(/\D/g, ''); // Quita símbolos, espacios, y el "+"
         const waLink = `https://wa.me/${limpio}?text=${encodeURIComponent(waMsg)}`;
-
-        if (createdBooking) {
-          updateBookingDraft({
-            bookingId: createdBooking.id,
-            professionalId: createdBooking.professionalId,
-            professionalName: createdBooking.professionalNameSnapshot,
-          });
-          document.getElementById('summaryBarber').textContent = createdBooking.professionalNameSnapshot || selectedProfessionalName;
-        }
-
+        
         document.getElementById('waBtnLink').href = waLink;
         
         // Abrir WhatsApp automáticamente con un pequeño retraso
@@ -971,27 +727,19 @@
       }, 300);
     }
 
-    function getActiveShopConfig() {
-      return window.AppStore?.get('profile')?.shopCompat || SHOP;
-    }
-
     function applyConfig() {
-      const activeShop = getActiveShopConfig();
-      document.title = `Agendar Hora | ${activeShop.nombre}`;
-      document.getElementById('shopLogo').src = activeShop.logo;
-      document.getElementById('shopLogo').alt = activeShop.nombre;
-      document.getElementById('shopNombre').textContent = activeShop.nombre;
-      document.getElementById('shopSlogan').textContent = activeShop.slogan;
-      document.getElementById('shopClubNombre').textContent = activeShop.club;
-      document.getElementById('shopDireccion').textContent = activeShop.direccion;
-      document.getElementById('shopHorario').textContent = activeShop.horario;
+      document.title = `Agendar Hora | ${SHOP.nombre}`;
+      document.getElementById('shopLogo').src = SHOP.logo;
+      document.getElementById('shopLogo').alt = SHOP.nombre;
+      document.getElementById('shopNombre').textContent = SHOP.nombre;
+      document.getElementById('shopSlogan').textContent = SHOP.slogan;
+      document.getElementById('shopClubNombre').textContent = SHOP.club;
+      document.getElementById('shopDireccion').textContent = SHOP.direccion;
+      document.getElementById('shopHorario').textContent = SHOP.horario;
 
       // Renderizar barberos
       const grid = document.getElementById('barberosGrid');
-      if (grid) grid.innerHTML = '';
-      /* legacy professionals rendering replaced by AppStore-backed renderProfessionalsGrid */
-      /*
-      grid.innerHTML = activeShop.barberos.map(b => `
+      grid.innerHTML = SHOP.barberos.map(b => `
         <div class="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-neon bg-brand-neon/5 shadow-[0_0_20px_rgba(255,255,255,0.2)] text-center overflow-hidden">
           <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
           <img src="${b.foto}" alt="Foto de ${b.nombre}"
@@ -1003,23 +751,14 @@
           </span>
         </div>
       `).join('');
-      */
 
       // Seleccionar barbero automáticamente si hay uno solo disponible
-      const draft = getDraft();
-      document.getElementById('summaryBarber').textContent = draft.professionalName || 'Cualquiera / El mas proximo';
-      if (!draft.professionalId) {
-        updateBookingDraft({
-          professionalId: 'any',
-          professionalName: 'Cualquiera / El mas proximo',
-        });
+      const disponible = SHOP.barberos.find(b => b.disponible);
+      if (disponible) {
+        document.getElementById('summaryBarber').textContent = disponible.nombre;
+        window._selectedBarber = disponible.nombre;
       }
-      renderProfessionalsGrid();
     }
-
-    window.addEventListener('app:tenant-ready', () => {
-      applyConfig();
-    });
 
     window.addEventListener('DOMContentLoaded', async () => {
       applyConfig();
@@ -1027,16 +766,6 @@
       renderCalendar();       // ahora que _fsConfig está listo
     });
 
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then(r => console.log('[SW] Registrado:', r.scope))
-          .catch(e => console.warn('[SW] Error:', e));
-      });
-    }
   </script>
 </body>
 
