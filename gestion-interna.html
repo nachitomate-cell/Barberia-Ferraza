@@ -1,24 +1,4 @@
-Los bugs persisten después del deploy. Necesito que 
-hagas esto para diagnosticar de raíz:
-
-1. Abre gestion-interna.html en el editor
-2. Busca EXACTAMENTE estas cadenas de texto y 
-   muéstrame la línea completa donde aparecen:
-
-   - "clientPanel" o "client-panel" o "vistaCliente"
-   - El onclick del botón con ✕ o flecha de retroceso
-   - El onclick del botón hamburguesa ≡
-
-3. Busca la función que se llama en esos onclicks
-   y muéstrame su código completo
-
-4. El botón "Activar Sonido" está tapando la barra 
-   de navegación inferior. Busca ese botón y agrégale:
-   margin-bottom: env(safe-area-inset-bottom)
-   o bottom: calc(4rem + env(safe-area-inset-bottom))
-
-NO hagas ningún fix todavía — solo muéstrame 
-el código exacto de esos 3 elementos primero.<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
