@@ -270,7 +270,7 @@
   </style>
 </head>
 
-<body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0 relative overflow-x-hidden">
+<body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0 relative">
 
 <!-- ══════════════════════════════════════
      NOTIFICATION TOAST
@@ -293,7 +293,8 @@
 </div>
 
 <!-- BOTÓN PARA DESBLOQUEAR AUDIO -->
-<button id="btnUnlockAudio" onclick="unlockAudioManual()" class="fixed bottom-6 left-6 md:bottom-10 md:left-72 z-[9999] bg-gray-800 text-gray-300 border border-gray-600 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-gray-700 transition-all font-bold text-sm">
+<button id="btnUnlockAudio" onclick="unlockAudioManual()" class="fixed bottom-6 left-6 md:bottom-10 md:left-72 z-[9999] bg-gray-800 text-gray-300 border border-gray-600 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-gray-700 active:opacity-60 transition-all font-bold text-sm"
+  style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
   <i class="ph-bold ph-speaker-slash"></i> Activar Sonido
 </button>
 
@@ -367,7 +368,8 @@ function closeSidebar() {
   <h1 class="text-sm font-bold flex-1 truncate">Panel Admin</h1>
   <!-- Campana push — mobile header -->
   <button id="notifBtnMobile" onclick="solicitarPermisosYObtenerToken()" aria-label="Notificaciones"
-    class="w-10 h-10 flex items-center justify-center rounded-xl transition-colors shrink-0">
+    class="w-10 h-10 flex items-center justify-center rounded-xl active:bg-white/10 transition-colors shrink-0"
+    style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
     <i id="notifIconMobile" class="ph ph-bell text-xl text-yellow-400"></i>
   </button>
   <button onclick="openManualBookingModal()" aria-label="Nueva Cita"
@@ -379,7 +381,7 @@ function closeSidebar() {
 <!-- Sidebar overlay (mobile) -->
 <div id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-<div class="flex h-[100dvh]">
+<div class="flex h-[100dvh] overflow-x-hidden">
 
   <!-- ══════════════════════════════════════
        SIDEBAR
@@ -871,7 +873,9 @@ function closeSidebar() {
 <div id="clientPanel">
   <!-- Header del panel -->
   <div class="sticky top-0 bg-admin-card/95 backdrop-blur border-b border-admin-border px-6 py-4 flex items-center gap-3 z-10">
-    <button onclick="cerrarPanel()" class="text-gray-400 hover:text-white transition-colors mr-1">
+    <button onclick="cerrarPanel()"
+      class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white active:opacity-60 transition-colors mr-1"
+      style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
       <i class="ph-bold ph-arrow-right text-xl"></i>
     </button>
     <div id="panelAvatar"
