@@ -2761,11 +2761,13 @@
         return;
       }
 
-      // Obtener token FCM usando el SW registrado
+      // Obtener token FCM (compat SDK pasa el SW via serviceWorkerRegistration)
       const messaging = firebase.messaging();
-      messaging.useServiceWorker(registration);
 
-      const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+      const token = await messaging.getToken({
+        vapidKey: FCM_VAPID_KEY,
+        serviceWorkerRegistration: registration
+      });
 
       if (token) {
         await _guardarToken(token);
@@ -2779,16 +2781,18 @@
       // Manejar mensajes en foreground (cuando la pestaña ESTÁ visible)
       messaging.onMessage(payload => {
         console.log('[FCM] Mensaje en foreground:', payload);
-        const title = payload.notification?.title || 'Nueva cita';
-        const body  = payload.notification?.body  || 'Tienes una nueva reserva agendada.';
+        const title = payload.notification?.title || payload.data?.title || 'Nueva cita';
+        const body  = payload.notification?.body  || payload.data?.body  || 'Tienes una nueva reserva agendada.';
 
         // Mostrar notificación del sistema aunque la pestaña esté abierta
         if (Notification.permission === 'granted') {
-          new Notification(title, {
+          registration.showNotification(title, {
             body,
-            icon:  '/icons/icon-192.png',
-            badge: '/icons/icon-192.png',
-            tag:   'nueva-cita-fg'
+            icon:     '/icons/icon-192.png',
+            badge:    '/icons/icon-192.png',
+            tag:      'nueva-cita-fg',
+            renotify: true,
+            data:     { url: '/gestion-interna.html' }
           });
         }
 
@@ -2800,7 +2804,10 @@
 
       // Renovar token si Firebase lo rota
       messaging.onTokenRefresh(async () => {
-        const nuevoToken = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+        const nuevoToken = await messaging.getToken({
+          vapidKey: FCM_VAPID_KEY,
+          serviceWorkerRegistration: registration
+        });
         if (nuevoToken) await _guardarToken(nuevoToken);
       });
 
