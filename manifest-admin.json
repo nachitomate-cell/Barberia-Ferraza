@@ -1,7 +1,7 @@
 {
-  "name": "Elegance Barbershop - Admin",
-  "short_name": "Elegance",
-  "description": "Panel de administración de Elegance Barbershop",
+  "name": "Panel Administrativo — Ferraza",
+  "short_name": "Admin Ferraza",
+  "description": "Panel de administración de Barbería Ferraza",
   "start_url": "/gestion-interna.html",
   "scope": "/",
   "display": "standalone",

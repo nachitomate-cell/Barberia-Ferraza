@@ -345,6 +345,11 @@
   </button>
   <img id="shopLogoMobile" src="" alt="" class="h-8 w-8 object-cover rounded-full border border-gray-700 shrink-0">
   <h1 class="text-sm font-bold flex-1 truncate">Panel Admin</h1>
+  <!-- Campana push — mobile header -->
+  <button id="notifBtnMobile" onclick="solicitarPermisosYObtenerToken()" aria-label="Notificaciones"
+    class="w-10 h-10 flex items-center justify-center rounded-xl transition-colors shrink-0">
+    <i id="notifIconMobile" class="ph ph-bell text-xl text-yellow-400"></i>
+  </button>
   <button onclick="openManualBookingModal()" aria-label="Nueva Cita"
     class="w-10 h-10 flex items-center justify-center rounded-xl bg-admin-accent/10 hover:bg-admin-accent/20 active:bg-admin-accent/30 transition-colors shrink-0">
     <i class="ph-bold ph-plus text-xl text-admin-accent"></i>
@@ -359,7 +364,7 @@
   <!-- ══════════════════════════════════════
        SIDEBAR
   ══════════════════════════════════════ -->
-  <aside id="sidebar" class="md:flex flex-col w-72 md:w-64 bg-admin-card border-r border-admin-border md:h-full shrink-0">
+  <aside id="sidebar" class="flex flex-col w-72 md:w-64 bg-admin-card border-r border-admin-border md:h-full shrink-0">
     <div class="p-5 border-b border-admin-border flex items-center gap-3">
       <img id="shopLogoSidebar" src="" alt="" class="h-10 w-10 object-cover rounded-full border border-gray-700 shrink-0">
       <div class="flex-1 min-w-0">
@@ -3456,35 +3461,42 @@ const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
                       || window.navigator.standalone === true;
 const _soportePush  = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 
-// ── Actualizar botón del sidebar ─────────────────────────────────
+// ── Actualizar botón del sidebar + ícono del header mobile ───────
 function _actualizarUI(estado) {
-  const btn    = document.getElementById('notifBtn');
-  const icon   = document.getElementById('notifIcon');
-  const label  = document.getElementById('notifLabel');
-  const badge  = document.getElementById('notifBadge');
-  if (!btn) return;
-
   const map = {
-    granted:   { iconCls: 'ph ph-bell-ringing text-green-400', labelTxt: 'Notificaciones activas',   btnCls: 'text-green-400 hover:bg-green-500/10', badgeTxt: 'ON',  badgeCls: 'bg-green-500/20 text-green-400', clickable: false },
-    denied:    { iconCls: 'ph ph-bell-slash text-red-400',     labelTxt: 'Notificaciones bloqueadas', btnCls: 'text-red-400 hover:bg-red-500/10',     badgeTxt: '',    badgeCls: '',                              clickable: false },
-    default:   { iconCls: 'ph ph-bell text-yellow-400',        labelTxt: 'Activar notificaciones',   btnCls: 'text-yellow-400 hover:bg-yellow-500/10',badgeTxt: '',    badgeCls: '',                              clickable: true  },
-    loading:   { iconCls: 'ph ph-circle-notch text-gray-400 animate-spin', labelTxt: 'Configurando…', btnCls: 'text-gray-400', badgeTxt: '',           badgeCls: '',                              clickable: false },
-    nosupport: { iconCls: 'ph ph-bell-slash text-gray-600',    labelTxt: 'Push no disponible',       btnCls: 'text-gray-600 cursor-default',          badgeTxt: '',    badgeCls: '',                              clickable: false },
-    ios_hint:  { iconCls: 'ph ph-bell text-blue-400',          labelTxt: 'Instala la app primero',   btnCls: 'text-blue-400 hover:bg-blue-500/10',    badgeTxt: '?',   badgeCls: 'bg-blue-500/20 text-blue-400',  clickable: true  },
+    granted:   { iconCls: 'ph ph-bell-ringing', color: 'text-green-400',  labelTxt: 'Notificaciones activas',   clickable: false },
+    denied:    { iconCls: 'ph ph-bell-slash',   color: 'text-red-400',    labelTxt: 'Notificaciones bloqueadas', clickable: false },
+    default:   { iconCls: 'ph ph-bell',         color: 'text-yellow-400', labelTxt: 'Activar notificaciones',   clickable: true  },
+    loading:   { iconCls: 'ph ph-circle-notch animate-spin', color: 'text-gray-400', labelTxt: 'Configurando…', clickable: false },
+    nosupport: { iconCls: 'ph ph-bell-slash',   color: 'text-gray-600',   labelTxt: 'Push no disponible',       clickable: false },
+    ios_hint:  { iconCls: 'ph ph-bell',         color: 'text-blue-400',   labelTxt: 'Instala la app primero',   clickable: true  },
   };
-
   const s = map[estado] || map.nosupport;
-  icon.className  = `${s.iconCls} text-lg`;
-  label.textContent = s.labelTxt;
-  btn.className   = `flex items-center gap-3 px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl ${s.btnCls}`;
-  btn.onclick     = s.clickable ? solicitarPermisosYObtenerToken : (estado === 'ios_hint' ? _mostrarHintIOS : null);
+  const handler = s.clickable ? solicitarPermisosYObtenerToken : (estado === 'ios_hint' ? _mostrarHintIOS : null);
 
-  if (s.badgeTxt) {
-    badge.textContent = s.badgeTxt;
-    badge.className   = `ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.badgeCls}`;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
+  // ── Sidebar (desktop + mobile slide-out) ──
+  const btn   = document.getElementById('notifBtn');
+  const icon  = document.getElementById('notifIcon');
+  const label = document.getElementById('notifLabel');
+  const badge = document.getElementById('notifBadge');
+  if (btn) {
+    if (icon)  icon.className  = `${s.iconCls} ${s.color} text-lg`;
+    if (label) label.textContent = s.labelTxt;
+    btn.onclick = handler;
+    if (badge) {
+      const badgeTxt = estado === 'granted' ? 'ON' : (estado === 'ios_hint' ? '?' : '');
+      badge.textContent = badgeTxt;
+      badge.className = `ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badgeTxt ? '' : 'hidden'}`;
+    }
+  }
+
+  // ── Header mobile (siempre visible en móvil) ──
+  const btnM  = document.getElementById('notifBtnMobile');
+  const iconM = document.getElementById('notifIconMobile');
+  if (btnM) {
+    if (iconM) iconM.className = `${s.iconCls} ${s.color} text-xl`;
+    btnM.onclick = handler;
+    btnM.title   = s.labelTxt;
   }
 }
 
