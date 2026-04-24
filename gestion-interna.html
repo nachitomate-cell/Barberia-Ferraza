@@ -4,8 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#000000">
   <title>Panel Admin</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest-admin.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Elegance">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseUtils.js"></script>
 
@@ -391,6 +400,14 @@
         </nav>
 
         <div class="p-4 border-t border-admin-border space-y-1">
+          <!-- Chip de estado de notificaciones push -->
+          <div class="px-4 py-2 flex items-center gap-2">
+            <i class="ph ph-bell text-sm text-gray-500"></i>
+            <span id="notifStatusChip"
+              class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border bg-gray-500/15 text-gray-400 border-gray-500/30">
+              Cargando…
+            </span>
+          </div>
           <button onclick="window.location.href='index.html'"
             class="flex items-center gap-3 text-gray-500 hover:text-white px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-white/5">
             <i class="ph ph-house text-lg"></i> Sitio Web
@@ -2530,6 +2547,11 @@
         _resubscribeCitas();
         loadMonthlyMetrics();
         initLookbookAdmin();
+
+        // Iniciar FCM (solicita permiso la primera vez; renueva token si ya fue concedido)
+        if (typeof solicitarPermisosYObtenerToken === 'function') {
+          setTimeout(solicitarPermisosYObtenerToken, 1500);
+        }
       }
 
       // ══════════════════════════════════════════════════════════════
@@ -2674,6 +2696,142 @@
     </script>
 
   </div><!-- /adminApp -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FIREBASE MESSAGING + SERVICE WORKER
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+  /* ── VAPID KEY ────────────────────────────────────────────────────
+     Obtén tu clave pública VAPID en:
+     Firebase Console → Configuración del proyecto → Cloud Messaging
+     → Configuración web → Generar par de claves
+     Reemplaza el string de abajo con tu clave real.
+  ──────────────────────────────────────────────────────────────── */
+  const FCM_VAPID_KEY = 'BHpDd1ssjyJApoxKD3hWAvCa8Zv89J-U6PpD1n1wx39Mov7c2RIZ_8CKJf5gSoz5bBA7qJRire5LWg8aJ4h5e2A';
+
+  /* ── ESTADO DE NOTIFICACIONES (chip UI) ─────────────────────────── */
+  function _actualizarChipNotif(estado) {
+    const chip = document.getElementById('notifStatusChip');
+    if (!chip) return;
+    const map = {
+      granted:  { text: 'Push activo',      cls: 'bg-green-500/15 text-green-400 border-green-500/30' },
+      denied:   { text: 'Push bloqueado',    cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
+      default:  { text: 'Activar push',      cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30 cursor-pointer' },
+      loading:  { text: 'Configurando…',     cls: 'bg-gray-500/15 text-gray-400 border-gray-500/30' },
+      nosupport:{ text: 'Sin soporte push',  cls: 'bg-gray-500/15 text-gray-500 border-gray-500/20' }
+    };
+    const s = map[estado] || map.nosupport;
+    chip.textContent = s.text;
+    chip.className = `text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-all ${s.cls}`;
+    chip.onclick = (estado === 'default') ? solicitarPermisosYObtenerToken : null;
+  }
+
+  /* ── GUARDAR TOKEN EN FIRESTORE ──────────────────────────────────── */
+  async function _guardarToken(token) {
+    try {
+      await db.collection('fcm_tokens').doc(token).set({
+        token,
+        dispositivo: navigator.userAgent.substring(0, 120),
+        creadoEn:    firebase.firestore.FieldValue.serverTimestamp(),
+        activo:      true
+      }, { merge: true });
+      console.log('[FCM] Token guardado en Firestore');
+    } catch (e) {
+      console.error('[FCM] Error guardando token:', e);
+    }
+  }
+
+  /* ── SOLICITAR PERMISO Y OBTENER TOKEN ──────────────────────────── */
+  async function solicitarPermisosYObtenerToken() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      _actualizarChipNotif('nosupport');
+      return;
+    }
+
+    _actualizarChipNotif('loading');
+
+    try {
+      // Esperar a que el SW esté registrado y listo
+      const registration = await navigator.serviceWorker.ready;
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        _actualizarChipNotif('denied');
+        console.warn('[FCM] Permiso denegado');
+        return;
+      }
+
+      // Obtener token FCM usando el SW registrado
+      const messaging = firebase.messaging();
+      messaging.useServiceWorker(registration);
+
+      const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+
+      if (token) {
+        await _guardarToken(token);
+        _actualizarChipNotif('granted');
+        console.log('[FCM] Token obtenido:', token);
+      } else {
+        console.warn('[FCM] No se pudo obtener el token (¿VAPID key incorrecta?)');
+        _actualizarChipNotif('default');
+      }
+
+      // Manejar mensajes en foreground (cuando la pestaña ESTÁ visible)
+      messaging.onMessage(payload => {
+        console.log('[FCM] Mensaje en foreground:', payload);
+        const title = payload.notification?.title || 'Nueva cita';
+        const body  = payload.notification?.body  || 'Tienes una nueva reserva agendada.';
+
+        // Mostrar notificación del sistema aunque la pestaña esté abierta
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon:  '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            tag:   'nueva-cita-fg'
+          });
+        }
+
+        // Toast interno de respaldo
+        if (typeof showMiniToast === 'function') {
+          showMiniToast(`${title}: ${body}`);
+        }
+      });
+
+      // Renovar token si Firebase lo rota
+      messaging.onTokenRefresh(async () => {
+        const nuevoToken = await messaging.getToken({ vapidKey: FCM_VAPID_KEY });
+        if (nuevoToken) await _guardarToken(nuevoToken);
+      });
+
+    } catch (err) {
+      console.error('[FCM] Error al configurar mensajería:', err);
+      _actualizarChipNotif('default');
+    }
+  }
+
+  /* ── REGISTRO DEL SERVICE WORKER ────────────────────────────────── */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        console.log('[SW] Registrado correctamente:', registration.scope);
+
+        // Auto-iniciar FCM si ya tiene permiso concedido
+        if (Notification.permission === 'granted') {
+          solicitarPermisosYObtenerToken();
+        } else {
+          _actualizarChipNotif(Notification.permission || 'default');
+        }
+      } catch (err) {
+        console.error('[SW] Error al registrar:', err);
+        _actualizarChipNotif('nosupport');
+      }
+    });
+  } else {
+    _actualizarChipNotif('nosupport');
+  }
+  </script>
 </body>
 
 </html>
