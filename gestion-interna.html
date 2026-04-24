@@ -2213,6 +2213,7 @@ function abrirPanel(uid) {
     renderClientList();
   });
 
+  document.getElementById('tab-clientes').classList.add('hidden');
   const modal = document.getElementById('clientModal');
   modal.classList.remove('hidden');
   modal.scrollTop = 0;
@@ -2223,6 +2224,7 @@ function cerrarPanel() {
   if (_panelUnsub) { _panelUnsub(); _panelUnsub = null; }
 
   document.getElementById('clientModal').classList.add('hidden');
+  document.getElementById('tab-clientes').classList.remove('hidden');
   currentClientUid = null;
   selectedPremio   = null;
 }
