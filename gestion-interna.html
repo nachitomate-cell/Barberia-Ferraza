@@ -361,7 +361,8 @@ function closeSidebar() {
 </script>
 
 <!-- ── Mobile Header ── -->
-<header class="md:hidden fixed top-0 left-0 right-0 h-16 bg-admin-card border-b border-admin-border flex items-center px-4 z-50 gap-3">
+<header class="md:hidden fixed top-0 left-0 right-0 bg-admin-card border-b border-admin-border flex items-center px-4 z-50 gap-3"
+        style="height: calc(env(safe-area-inset-top) + 4rem); padding-top: env(safe-area-inset-top);">
   <button id="hamburgerBtn" onclick="openSidebar()" aria-label="Menú"
     class="w-10 h-10 flex items-center justify-center rounded-xl active:bg-white/10 transition-colors shrink-0 -ml-1"
     style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
@@ -461,7 +462,8 @@ function closeSidebar() {
   <!-- ══════════════════════════════════════
        MAIN
   ══════════════════════════════════════ -->
-  <main class="flex-1 h-full overflow-y-auto w-full px-4 py-6 lg:px-10 lg:py-10 pt-20 md:pt-10 max-w-5xl mx-auto">
+  <main class="flex-1 h-full overflow-y-auto w-full px-4 py-6 lg:px-10 lg:py-10 md:pt-10 max-w-5xl mx-auto"
+        style="padding-top: max(calc(env(safe-area-inset-top) + 5rem), 5rem);">
 
     <!-- ══════════════════ TAB 1: CITAS ══════════════════ -->
     <div id="tab-citas" class="tab-content block">
@@ -875,7 +877,8 @@ function closeSidebar() {
 
 <div id="clientPanel">
   <!-- Header del panel -->
-  <div class="sticky top-0 bg-admin-card/95 backdrop-blur border-b border-admin-border px-6 py-4 flex items-center gap-3 z-10">
+  <div class="sticky top-0 bg-admin-card/95 backdrop-blur border-b border-admin-border px-6 py-4 flex items-center gap-3 z-10"
+       style="padding-top: max(env(safe-area-inset-top), 1rem);">
     <button onclick="cerrarPanel()"
       class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white active:opacity-60 transition-colors mr-1"
       style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
@@ -2573,6 +2576,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
     // Autenticado y autorizado: mostrar app, ocultar overlay
     document.getElementById('loginOverlay').classList.add('hidden');
     document.getElementById('adminApp').classList.remove('hidden');
+
+    // Safari iOS: forzar repaint de elementos fixed que estaban dentro de display:none
+    // Sin esto, position:fixed puede quedar mal posicionado hasta el siguiente scroll
+    const _mobileHeader = document.querySelector('header.md\\:hidden');
+    if (_mobileHeader) {
+      _mobileHeader.style.display = 'none';
+      void _mobileHeader.offsetHeight; // trigger reflow
+      _mobileHeader.style.display = '';
+    }
 
     if (!_adminInitialized) {
       _adminInitialized = true;
