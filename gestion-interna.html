@@ -381,7 +381,7 @@ function closeSidebar() {
 <!-- Sidebar overlay (mobile) -->
 <div id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-<div class="flex h-[100dvh] overflow-x-hidden">
+<div class="flex h-[100dvh]">
 
   <!-- ══════════════════════════════════════
        SIDEBAR
@@ -876,7 +876,7 @@ function closeSidebar() {
     <button onclick="cerrarPanel()"
       class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white active:opacity-60 transition-colors mr-1"
       style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-      <i class="ph-bold ph-arrow-right text-xl"></i>
+      <i class="ph-bold ph-x text-xl"></i>
     </button>
     <div id="panelAvatar"
       class="w-10 h-10 rounded-full bg-admin-bg border border-admin-border flex items-center justify-center overflow-hidden shrink-0">
@@ -3482,6 +3482,19 @@ const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
                       || window.navigator.standalone === true;
 const _soportePush  = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 
+// ── Feedback para estados no-clickable ──────────────────────────
+function _toastEstado(est) {
+  const msgs = {
+    granted:   'Las notificaciones ya están activas ✓',
+    denied:    'Las notificaciones están bloqueadas. Habilítalas en Ajustes del sistema.',
+    nosupport: 'Tu navegador o dispositivo no soporta notificaciones push.',
+    loading:   'Configurando notificaciones, espera un momento…',
+  };
+  const msg = msgs[est] || 'Estado de notificaciones desconocido.';
+  if (typeof showMiniToast === 'function') showMiniToast(msg);
+  else alert(msg);
+}
+
 // ── Actualizar botón del sidebar + ícono del header mobile ───────
 function _actualizarUI(estado) {
   const map = {
@@ -3493,7 +3506,10 @@ function _actualizarUI(estado) {
     ios_hint:  { iconCls: 'ph ph-bell',         color: 'text-blue-400',   labelTxt: 'Instala la app primero',   clickable: true  },
   };
   const s = map[estado] || map.nosupport;
-  const handler = s.clickable ? solicitarPermisosYObtenerToken : (estado === 'ios_hint' ? _mostrarHintIOS : null);
+  // Siempre asignar un handler — nunca dejar el botón muerto sin feedback
+  const handler = s.clickable
+    ? solicitarPermisosYObtenerToken
+    : (estado === 'ios_hint' ? _mostrarHintIOS : () => _toastEstado(estado));
 
   // ── Sidebar (desktop + mobile slide-out) ──
   const btn   = document.getElementById('notifBtn');
