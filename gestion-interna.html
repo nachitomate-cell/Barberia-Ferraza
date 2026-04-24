@@ -345,7 +345,6 @@
   </button>
   <img id="shopLogoMobile" src="" alt="" class="h-8 w-8 object-cover rounded-full border border-gray-700 shrink-0">
   <h1 class="text-sm font-bold flex-1 truncate">Panel Admin</h1>
-  <span id="notifStatusChip" class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-all bg-yellow-500/15 text-yellow-400 border-yellow-500/30 cursor-pointer shrink-0"></span>
   <button onclick="openManualBookingModal()" aria-label="Nueva Cita"
     class="w-10 h-10 flex items-center justify-center rounded-xl bg-admin-accent/10 hover:bg-admin-accent/20 active:bg-admin-accent/30 transition-colors shrink-0">
     <i class="ph-bold ph-plus text-xl text-admin-accent"></i>
@@ -407,6 +406,13 @@
     </div>
 
     <div class="p-4 border-t border-admin-border space-y-1 shrink-0">
+      <!-- Botón notificaciones push -->
+      <button id="notifBtn" onclick="solicitarPermisosYObtenerToken()"
+        class="flex items-center gap-3 px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl">
+        <i id="notifIcon" class="ph ph-bell text-lg"></i>
+        <span id="notifLabel">Activar notificaciones</span>
+        <span id="notifBadge" class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+      </button>
       <button onclick="window.location.href='index.html'"
         class="flex items-center gap-3 text-gray-500 hover:text-white px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl hover:bg-white/5">
         <i class="ph ph-house text-lg"></i> Sitio Web
@@ -3440,22 +3446,54 @@ document.addEventListener('click', function(e) {
 <script>
 const FCM_VAPID_KEY = 'BHpDd1ssjyJApoxKD3hWAvCa8Zv89J-U6PpD1n1wx39Mov7c2RIZ_8CKJf5gSoz5bBA7qJRire5LWg8aJ4h5e2A';
 
-function _actualizarChipNotif(estado) {
-  const chip = document.getElementById('notifStatusChip');
-  if (!chip) return;
+// ── Detectores de entorno ────────────────────────────────────────
+const _isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || window.navigator.standalone === true;
+const _soportePush  = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+
+// ── Actualizar botón del sidebar ─────────────────────────────────
+function _actualizarUI(estado) {
+  const btn    = document.getElementById('notifBtn');
+  const icon   = document.getElementById('notifIcon');
+  const label  = document.getElementById('notifLabel');
+  const badge  = document.getElementById('notifBadge');
+  if (!btn) return;
+
   const map = {
-    granted:  { text: 'Push activo',     cls: 'bg-green-500/15 text-green-400 border-green-500/30' },
-    denied:   { text: 'Push bloqueado',  cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
-    default:  { text: 'Activar push',    cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30 cursor-pointer' },
-    loading:  { text: 'Configurando…',  cls: 'bg-gray-500/15 text-gray-400 border-gray-500/30' },
-    nosupport:{ text: 'Sin soporte push',cls: 'bg-gray-500/15 text-gray-500 border-gray-500/20' }
+    granted:   { iconCls: 'ph ph-bell-ringing text-green-400', labelTxt: 'Notificaciones activas',   btnCls: 'text-green-400 hover:bg-green-500/10', badgeTxt: 'ON',  badgeCls: 'bg-green-500/20 text-green-400', clickable: false },
+    denied:    { iconCls: 'ph ph-bell-slash text-red-400',     labelTxt: 'Notificaciones bloqueadas', btnCls: 'text-red-400 hover:bg-red-500/10',     badgeTxt: '',    badgeCls: '',                              clickable: false },
+    default:   { iconCls: 'ph ph-bell text-yellow-400',        labelTxt: 'Activar notificaciones',   btnCls: 'text-yellow-400 hover:bg-yellow-500/10',badgeTxt: '',    badgeCls: '',                              clickable: true  },
+    loading:   { iconCls: 'ph ph-circle-notch text-gray-400 animate-spin', labelTxt: 'Configurando…', btnCls: 'text-gray-400', badgeTxt: '',           badgeCls: '',                              clickable: false },
+    nosupport: { iconCls: 'ph ph-bell-slash text-gray-600',    labelTxt: 'Push no disponible',       btnCls: 'text-gray-600 cursor-default',          badgeTxt: '',    badgeCls: '',                              clickable: false },
+    ios_hint:  { iconCls: 'ph ph-bell text-blue-400',          labelTxt: 'Instala la app primero',   btnCls: 'text-blue-400 hover:bg-blue-500/10',    badgeTxt: '?',   badgeCls: 'bg-blue-500/20 text-blue-400',  clickable: true  },
   };
+
   const s = map[estado] || map.nosupport;
-  chip.textContent = s.text;
-  chip.className = `text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-all shrink-0 ${s.cls}`;
-  chip.onclick = (estado === 'default') ? solicitarPermisosYObtenerToken : null;
+  icon.className  = `${s.iconCls} text-lg`;
+  label.textContent = s.labelTxt;
+  btn.className   = `flex items-center gap-3 px-4 py-2.5 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl ${s.btnCls}`;
+  btn.onclick     = s.clickable ? solicitarPermisosYObtenerToken : (estado === 'ios_hint' ? _mostrarHintIOS : null);
+
+  if (s.badgeTxt) {
+    badge.textContent = s.badgeTxt;
+    badge.className   = `ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.badgeCls}`;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 
+// ── Hint para iOS no instalado ───────────────────────────────────
+function _mostrarHintIOS() {
+  if (typeof showMiniToast === 'function') {
+    showMiniToast('Toca Compartir → "Añadir a inicio" y ábrela desde ahí');
+  } else {
+    alert('Para recibir notificaciones en iPhone:\n1. Toca el botón Compartir (⬆️)\n2. Toca "Añadir a la pantalla de inicio"\n3. Abre la app desde el ícono instalado');
+  }
+}
+
+// ── Guardar token en Firestore ───────────────────────────────────
 async function _guardarToken(token) {
   try {
     await db.collection('fcm_tokens').doc(token).set({
@@ -3464,22 +3502,35 @@ async function _guardarToken(token) {
       creadoEn:    firebase.firestore.FieldValue.serverTimestamp(),
       activo:      true
     }, { merge: true });
+    console.log('[FCM] Token guardado');
   } catch (e) {
     console.error('[FCM] Error guardando token:', e);
   }
 }
 
-async function solicitarPermisosYObtenerToken() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    _actualizarChipNotif('nosupport'); return;
-  }
-  _actualizarChipNotif('loading');
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    const permission   = await Notification.requestPermission();
-    if (permission !== 'granted') { _actualizarChipNotif('denied'); return; }
+// ── Flujo principal: pedir permiso y obtener token ───────────────
+let _messagingInstance = null;
+let _swRegistration    = null;
 
-    const messaging = firebase.messaging();
+async function solicitarPermisosYObtenerToken() {
+  // iOS sin PWA instalada → mostrar instrucciones
+  if (_isIOS && !_isStandalone) { _mostrarHintIOS(); return; }
+
+  if (!_soportePush) { _actualizarUI('nosupport'); return; }
+
+  _actualizarUI('loading');
+
+  try {
+    const registration = _swRegistration || await navigator.serviceWorker.ready;
+    _swRegistration = registration;
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { _actualizarUI('denied'); return; }
+
+    // Obtener token FCM
+    const messaging = _messagingInstance || firebase.messaging();
+    _messagingInstance = messaging;
+
     const token = await messaging.getToken({
       vapidKey: FCM_VAPID_KEY,
       serviceWorkerRegistration: registration
@@ -3487,54 +3538,63 @@ async function solicitarPermisosYObtenerToken() {
 
     if (token) {
       await _guardarToken(token);
-      _actualizarChipNotif('granted');
-    } else {
-      _actualizarChipNotif('default');
-    }
+      _actualizarUI('granted');
 
-    // Foreground: pestaña abierta y activa
-    messaging.onMessage(payload => {
-      const title = payload.notification?.title || payload.data?.title || 'Nueva cita';
-      const body  = payload.notification?.body  || payload.data?.body  || 'Tienes una nueva reserva.';
-      if (Notification.permission === 'granted') {
+      // Foreground: notificación aunque la pestaña esté abierta
+      messaging.onMessage(payload => {
+        const title = payload.notification?.title || payload.data?.title || 'Nueva cita';
+        const body  = payload.notification?.body  || payload.data?.body  || 'Tienes una nueva reserva.';
         registration.showNotification(title, {
           body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
-          tag: 'nueva-cita-fg', renotify: true, data: { url: '/gestion-interna.html' }
+          tag: 'nueva-cita', renotify: true, data: { url: '/gestion-interna.html' }
         });
-      }
-      if (typeof showMiniToast === 'function') showMiniToast(`${title}: ${body}`);
-    });
+        if (typeof showMiniToast === 'function') showMiniToast(`🔔 ${title}: ${body}`);
+      });
 
-    // Renovar token si Firebase lo rota
-    messaging.onTokenRefresh(async () => {
-      const t = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
-      if (t) await _guardarToken(t);
-    });
+      // Renovación automática del token
+      messaging.onTokenRefresh(async () => {
+        const t = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
+        if (t) await _guardarToken(t);
+      });
+
+    } else {
+      console.warn('[FCM] Token vacío — revisa la VAPID key');
+      _actualizarUI('default');
+    }
 
   } catch (err) {
     console.error('[FCM] Error:', err);
-    _actualizarChipNotif('default');
+    _actualizarUI('default');
   }
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      console.log('[SW] Registrado:', reg.scope);
-      if (Notification.permission === 'granted') {
-        solicitarPermisosYObtenerToken();
-      } else {
-        _actualizarChipNotif(Notification.permission || 'default');
-      }
-    } catch (err) {
-      console.error('[SW] Error:', err);
-      _actualizarChipNotif('nosupport');
+// ── Inicialización al cargar ─────────────────────────────────────
+window.addEventListener('load', async () => {
+  // iOS sin instalar → mostrar hint inmediatamente
+  if (_isIOS && !_isStandalone) {
+    _actualizarUI('ios_hint'); return;
+  }
+
+  if (!_soportePush) {
+    _actualizarUI('nosupport'); return;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    _swRegistration = reg;
+    console.log('[SW] Registrado:', reg.scope);
+
+    // Si ya tiene permiso concedido → renovar token silenciosamente
+    if (Notification.permission === 'granted') {
+      solicitarPermisosYObtenerToken();
+    } else {
+      _actualizarUI(Notification.permission === 'denied' ? 'denied' : 'default');
     }
-  });
-} else {
-  _actualizarChipNotif('nosupport');
-}
+  } catch (err) {
+    console.error('[SW] Error registrando SW:', err);
+    _actualizarUI('nosupport');
+  }
+});
 </script>
 
 </body>
