@@ -289,9 +289,8 @@
         <h4 class="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-0.5 group-hover:text-gray-300 transition-colors">Reserva Confirmada</h4>
         <p id="notifMessage" class="text-sm font-medium text-admin-accent truncate">Nombre | 15:30 | Servicio</p>
       </div>
-      <button onclick="dismissNotification(event, false)" class="text-gray-500 hover:text-white transition-colors shrink-0 p-1">
-        <span class="text-sm font-bold leading-none">✕</span>
-      </button>
+      <button onclick="dismissNotification(event, false)"
+        style="min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;color:#6b7280;cursor:pointer;background:none;border:none;font-size:0.875rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;flex-shrink:0;padding:4px;">✕</button>
     </div>
   </div>
 </div>
@@ -362,7 +361,7 @@ function closeSidebar() {
   <button id="hamburgerBtn" onclick="openSidebar()" aria-label="Menú"
     class="w-10 h-10 flex items-center justify-center rounded-xl active:bg-white/10 transition-colors shrink-0 -ml-1"
     style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-    <i class="ph-bold ph-list text-xl text-gray-300"></i>
+    <span style="font-size:1.25rem;color:#d1d5db;font-weight:bold;line-height:1;">☰</span>
   </button>
   <img id="shopLogoMobile" src="" alt="" class="h-8 w-8 object-cover rounded-full border border-gray-700 shrink-0">
   <h1 class="text-sm font-bold flex-1 truncate">Panel Admin</h1>
@@ -394,9 +393,8 @@ function closeSidebar() {
         <p id="shopNombreSidebar" class="text-xs text-gray-500 truncate"></p>
       </div>
       <button onclick="closeSidebar()" aria-label="Cerrar menú"
-        class="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors shrink-0">
-        <span class="text-lg font-bold leading-none">✕</span>
-      </button>
+        class="md:hidden"
+        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:12px;color:#6b7280;cursor:pointer;background:none;border:none;font-size:1.125rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;flex-shrink:0;">✕</button>
     </div>
 
     <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -788,9 +786,8 @@ function closeSidebar() {
             oninput="filtrarClientes()"
             class="w-full bg-admin-card border border-admin-border rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white focus:outline-none focus:border-admin-accent transition-colors">
           <button id="clearSearch" onclick="limpiarBusqueda()"
-            class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
-            <span class="text-sm font-bold leading-none">✕</span>
-          </button>
+            class="hidden absolute"
+            style="right:1rem;top:50%;transform:translateY(-50%);color:#6b7280;cursor:pointer;background:none;border:none;font-size:0.875rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;padding:4px;">✕</button>
         </div>
         <button onclick="abrirModalNuevoCliente()"
           class="shrink-0 flex items-center gap-2 bg-admin-accent text-admin-bg font-bold px-5 py-3 rounded-2xl hover:bg-emerald-300 transition-colors text-sm whitespace-nowrap">
@@ -882,9 +879,8 @@ function closeSidebar() {
   <!-- Header del panel -->
   <div class="sticky top-0 bg-admin-card/95 backdrop-blur border-b border-admin-border px-6 py-4 flex items-center gap-3 z-10">
     <button onclick="cerrarPanel()"
-      class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white active:opacity-60 transition-colors mr-1"
-      style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-      <span class="text-xl font-bold leading-none">✕</span>
+      style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:#9ca3af;margin-right:4px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;background:none;border:none;font-size:1.5rem;font-weight:bold;">
+      ✕
     </button>
     <div id="panelAvatar"
       class="w-10 h-10 rounded-full bg-admin-bg border border-admin-border flex items-center justify-center overflow-hidden shrink-0">
@@ -1024,7 +1020,7 @@ function closeSidebar() {
 ══════════════════════════════════════════════════════ -->
 <div id="manualBookingModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-lg shadow-2xl p-6 relative overflow-y-auto">
-    <button onclick="closeManualBookingModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><span class="text-2xl font-bold leading-none">✕</span></button>
+    <button onclick="closeManualBookingModal()" style="position:absolute;top:1.25rem;right:1.25rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;background:none;border:none;font-size:1.5rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">✕</button>
     <h2 class="text-xl font-bold mb-5">Nueva Cita</h2>
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
@@ -1073,7 +1069,7 @@ function closeSidebar() {
 ══════════════════════════════════════════════════════ -->
 <div id="editServiceModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
-    <button onclick="closeEditModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white"><span class="text-2xl font-bold leading-none">✕</span></button>
+    <button onclick="closeEditModal()" style="position:absolute;top:1.25rem;right:1.25rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;background:none;border:none;font-size:1.5rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">✕</button>
     <h2 class="text-xl font-bold mb-5">Editar Servicio</h2>
     <input type="hidden" id="edit-srv-id">
     <div class="space-y-3">
@@ -1114,9 +1110,7 @@ function closeSidebar() {
 ══════════════════════════════════════════════════════ -->
 <div id="nuevoClienteModal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm modal-sheet">
   <div class="sheet-inner bg-admin-card border border-t border-admin-border sm:max-w-sm shadow-2xl p-6 relative">
-    <button onclick="cerrarModalNuevoCliente()" class="absolute top-5 right-5 text-gray-400 hover:text-white">
-      <span class="text-2xl font-bold leading-none">✕</span>
-    </button>
+    <button onclick="cerrarModalNuevoCliente()" style="position:absolute;top:1.25rem;right:1.25rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;background:none;border:none;font-size:1.5rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">✕</button>
     <h2 class="text-xl font-bold mb-1">Nuevo Cliente</h2>
     <p class="text-xs text-gray-500 mb-5">Agrega un cliente directamente a la base de datos del club.</p>
 
@@ -1171,9 +1165,7 @@ function closeSidebar() {
           <p class="text-[11px] text-gray-500">El bloqueo oculta estas horas en el portal del cliente</p>
         </div>
       </div>
-      <button onclick="closeBloqueoModal()" class="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">
-        <span class="text-xl font-bold leading-none">✕</span>
-      </button>
+      <button onclick="closeBloqueoModal()" style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:#6b7280;cursor:pointer;background:none;border:none;font-size:1.25rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">✕</button>
     </div>
 
     <div class="space-y-4">
@@ -1798,7 +1790,7 @@ function renderBloqueosDelDia() {
             </div>
             <button onclick="eliminarBloqueo('${b.id}')"
               class="shrink-0 text-xs font-bold text-red-400/60 hover:text-red-400 px-3 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/50 transition-all">
-              <span class="text-xs font-bold leading-none mr-1">✕</span> Quitar
+              <span style="font-size:.75rem;font-weight:bold;margin-right:.25rem;">✕</span> Quitar
             </button>
           </div>`).join('')}
       </div>
@@ -1999,7 +1991,7 @@ function renderBlockedDates() {
         <span class="text-sm font-semibold text-white">${d}</span>
         <span class="text-xs text-gray-500">${new Date(d+'T12:00:00').toLocaleDateString('es-CL',{weekday:'long'})}</span>
       </div>
-      <button onclick="eliminarFechaBloqueada('${d}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"><span class="text-sm font-bold leading-none">✕</span></button>
+      <button onclick="eliminarFechaBloqueada('${d}')" style="min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;color:#f87171;cursor:pointer;background:none;border:none;font-size:0.875rem;font-weight:bold;touch-action:manipulation;-webkit-tap-highlight-color:transparent;border-radius:8px;padding:6px;">✕</button>
     </div>`).join('');
 }
 function guardarIntervalo() {
@@ -3426,7 +3418,7 @@ document.addEventListener('click', function(e) {
       <p id="crmPhone" style="font-size:.8rem; color:#6b7280; font-family:monospace; margin-top:.15rem;"></p>
     </div>
     <button onclick="closeCRMDrawer()" style="width:2rem; height:2rem; border-radius:50%; background:rgba(255,255,255,.05); border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:.75rem;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
-      <span style="font-size:.9rem; font-weight:bold; line-height:1;">✕</span>
+      ✕
     </button>
   </div>
 
