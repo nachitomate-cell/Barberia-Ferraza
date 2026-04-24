@@ -3555,12 +3555,6 @@ async function solicitarPermisosYObtenerToken() {
         if (typeof showMiniToast === 'function') showMiniToast(`🔔 ${title}: ${body}`);
       });
 
-      // Renovación automática del token
-      messaging.onTokenRefresh(async () => {
-        const t = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
-        if (t) await _guardarToken(t);
-      });
-
     } else {
       console.warn('[FCM] Token vacío — revisa la VAPID key');
       _actualizarUI('default');
