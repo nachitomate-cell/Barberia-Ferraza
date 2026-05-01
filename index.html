@@ -292,6 +292,7 @@
 
     // Caché local (alimentado por Firestore al iniciar)
     let _fsConfig        = null;
+    let _activeBarberConfig = null;
     let _fsServices      = [];
     let _bloqueosProximos = {}; // { "YYYY-MM-DD": true } — días con bloqueo total
 
@@ -567,7 +568,7 @@
 
       currentDateStr = dateStr;
       selectedTimeStr = null;
-      renderHours();
+      renderHours(_activeBarberConfig);
     }
 
     async function renderHours(customConfig = null) {
@@ -710,15 +711,13 @@
       } else if (currentStep === 2) {
         const barId = window._selectedBarberId;
         if (barId) {
-          // Intentar cargar config específica del barbero
           const barCfg = await FDB.getConfigBarbero(barId);
-          // Si el barbero no tiene config personalizada, se usa la global
-          renderCalendar(barCfg);
-          renderHours(barCfg);
+          _activeBarberConfig = barCfg;
         } else {
-          renderCalendar();
-          renderHours();
+          _activeBarberConfig = null;
         }
+        renderCalendar(_activeBarberConfig);
+        renderHours(_activeBarberConfig);
 
         transitionStep(2, 3);
         currentStep = 3;
