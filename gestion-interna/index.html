@@ -2342,8 +2342,11 @@
             });
           }
 
+          // Excluir barberos desactivados y con rol admin
+          barberos = barberos.filter(b => b.activo !== false && b.rol !== 'admin');
+
           if (!barberos.length) {
-            sel.innerHTML = '<option value="">Sin barberos registrados</option>';
+            sel.innerHTML = '<option value="">Sin barberos configurables</option>';
             return;
           }
 
