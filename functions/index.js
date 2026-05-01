@@ -47,7 +47,7 @@ async function enviarPush({ title, body, citaId, fecha, hora }) {
     notification: { title, body },
     data: {
       citaId:  citaId || '',
-      url:     '/gestion-interna.html',
+      url:     '/gestion-interna/',
       fecha:   fecha  || '',
       hora:    hora   || '',
     },
@@ -62,9 +62,9 @@ async function enviarPush({ title, body, citaId, fecha, hora }) {
         tag:      'nueva-cita',
         renotify: true,
         actions:  [{ action: 'abrir', title: 'Ver cita' }],
-        data:     { url: '/gestion-interna.html', citaId: citaId || '' }
+        data:     { url: '/gestion-interna/', citaId: citaId || '' }
       },
-      fcmOptions: { link: '/gestion-interna.html' }
+      fcmOptions: { link: '/gestion-interna/' }
     },
     tokens,
   };

@@ -39,5 +39,51 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/servicios",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agenda",
+      "destination": "/agenda.html"
+    },
+    {
+      "source": "/agenda/:id*",
+      "destination": "/agenda.html"
+    },
+    {
+      "source": "/admin/ferraza",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/gestion-interna/agenda",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/servicios",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/configuracion",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/clientes/:uid*",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/barberos",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/lookbook",
+      "destination": "/gestion-interna/index.html"
+    },
+    {
+      "source": "/gestion-interna/ferraza",
+      "destination": "/gestion-interna/index.html"
+    }
   ]
 }

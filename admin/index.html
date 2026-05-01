@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Portal Admin | Ferraza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="/output.css" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: #0b1120;
+      color: #F9FAFB;
+      font-family: 'Inter', sans-serif;
+      background-image:
+        radial-gradient(ellipse at 10% 20%, rgba(52, 211, 153, 0.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 90% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 55%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+    }
+
+    /* ── Tenant button ── */
+    .tenant-button {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-decoration: none;
+      color: inherit;
+    }
+    .tenant-button:hover {
+      transform: translateY(-4px);
+      border-color: rgba(52, 211, 153, 0.4);
+      background: rgba(52, 211, 153, 0.06);
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25), 0 0 20px rgba(52, 211, 153, 0.12);
+    }
+
+    /* ── Drawer overlay ── */
+    #drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      z-index: 40;
+    }
+    #drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Drawer panel ── */
+    #drawer-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0f1e34;
+      border-top: 1px solid rgba(52, 211, 153, 0.18);
+      border-radius: 1.5rem 1.5rem 0 0;
+      padding: 0 1.5rem 2rem;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.32, 0, 0.15, 1);
+      z-index: 50;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 -20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(52,211,153,0.06);
+    }
+    #drawer-panel.open {
+      transform: translateY(0);
+    }
+
+    /* Drag handle */
+    .drawer-handle {
+      width: 40px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 999px;
+      margin: 1rem auto 1.5rem;
+    }
+
+    /* ── Stat card ── */
+    .stat-card {
+      background: rgba(52, 211, 153, 0.06);
+      border: 1px solid rgba(52, 211, 153, 0.16);
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: background 0.2s ease;
+    }
+    .stat-card:hover {
+      background: rgba(52, 211, 153, 0.1);
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 0.875rem;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Skeleton loader */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.06) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 0.5rem;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* CTA button */
+    .cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      border-radius: 0.875rem;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+    }
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(16,185,129,0.4);
+    }
+    .cta-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Status badge */
+    .badge-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #34d399;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      animation: pulse-dot 1.8s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    /* Secondary button */
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Pantalla de bloqueo para no-admins -->
+  <div id="unauthorized-screen" class="hidden" style="position:fixed; inset:0; background:black; z-index:9999; display:flex; align-items:center; justify-content:center;">
+    <img src="/perro.webp" alt="Acceso Denegado" style="max-width:90%; max-height:90%; object-fit:contain; animation: pulse 2s infinite;">
+  </div>
+
+  <style>
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+  </style>
+
+  <!-- ── Header ── -->
+  <div style="margin-bottom:3rem; text-align:center;">
+    <div style="
+      display:inline-flex; align-items:center; justify-content:center;
+      width:64px; height:64px; border-radius:1rem;
+      background:rgba(52,211,153,0.1); margin-bottom:1.5rem;
+      border:1px solid rgba(52,211,153,0.2);
+    ">
+      <i class="ph-fill ph-layout" style="font-size:1.875rem; color:#34d399;"></i>
+    </div>
+    <h1 style="font-size:1.875rem; font-weight:700; letter-spacing:-0.03em; color:#fff; margin:0 0 0.5rem;">
+      Portal de Administración
+    </h1>
+    <p style="color:#94a3b8; font-size:0.9375rem; margin:0;">
+      Selecciona una sucursal para gestionar
+    </p>
+  </div>
+
+  <!-- ── Tenant list ── -->
+  <div style="width:100%; max-width:440px;">
+
+    <!-- Barbería Ferraza card -->
+    <button
+      id="btn-ferraza"
+      class="tenant-button glass-card"
+      aria-haspopup="dialog"
+      aria-controls="drawer-panel"
+      onclick="openDrawer()"
+    >
+      <div style="display:flex; align-items:center; gap:1.25rem;">
+        <!-- Logo -->
+        <div style="position:relative; flex-shrink:0;">
+          <div id="logo-glow" style="
+            position:absolute; inset:0; background:rgba(52,211,153,0.2);
+            filter:blur(14px); border-radius:50%; opacity:0; transition:opacity 0.3s;
+          "></div>
+          <img
+            src="/logo.jpg"
+            alt="Barbería Ferraza"
+            style="position:relative; width:64px; height:64px; border-radius:1rem;
+                   object-fit:cover; border:1px solid rgba(255,255,255,0.1);"
+          >
+        </div>
+
+        <!-- Info -->
+        <div style="flex:1; min-width:0;">
+          <h2 style="font-size:1.125rem; font-weight:700; color:#fff; margin:0 0 0.25rem;">
+            Barbería Ferraza
+          </h2>
+          <p style="font-size:0.8125rem; color:#64748b; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            Sede Central · Av. Libertad 63 / Local 28
+          </p>
+        </div>
+
+        <!-- Arrow -->
+        <div style="
+          width:36px; height:36px; border-radius:50%; flex-shrink:0;
+          display:flex; align-items:center; justify-content:center;
+          background:rgba(255,255,255,0.05);
+        ">
+          <i class="ph-bold ph-caret-right" style="color:#64748b;"></i>
+        </div>
+      </div>
+    </button>
+
+    <!-- Footer meta -->
+    <div style="margin-top:2rem; display:flex; align-items:center; justify-content:center; gap:1.5rem;">
+      <div style="text-align:center;">
+        <span style="font-size:0.625rem; text-transform:uppercase; letter-spacing:0.12em; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Versión</span>
+        <span style="font-size:0.75rem; font-weight:500; color:#94a3b8;">v2.4.0-admin</span>
+      </div>
+      <div style="width:1px; height:24px; background:#1e293b;"></div>
+      <div style="text-align:center;">
+        <span style="font-size:0.625rem; text-transform:uppercase; letter-spacing:0.12em; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Estado</span>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <div style="width:6px; height:6px; border-radius:50%; background:#34d399; animation:pulse-dot 1.8s infinite;"></div>
+          <span style="font-size:0.75rem; font-weight:500; color:#34d399;">Sistemas Activos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       DRAWER OVERLAY
+  ══════════════════════════════════════════ -->
+  <div id="drawer-overlay" role="presentation" onclick="closeDrawer()"></div>
+
+  <!-- ══════════════════════════════════════════
+       DRAWER PANEL — Barbería Ferraza
+  ══════════════════════════════════════════ -->
+  <div id="drawer-panel" role="dialog" aria-modal="true" aria-label="Panel Barbería Ferraza">
+
+    <!-- Handle -->
+    <div class="drawer-handle"></div>
+
+    <!-- Drawer header -->
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.75rem;">
+      <img
+        src="/logo.jpg"
+        alt="Ferraza"
+        style="width:52px; height:52px; border-radius:0.875rem; object-fit:cover; border:1px solid rgba(52,211,153,0.2);"
+      >
+      <div style="flex:1;">
+        <h3 style="font-size:1.125rem; font-weight:700; color:#fff; margin:0 0 0.25rem;">
+          Barbería Ferraza
+        </h3>
+        <p style="font-size:0.8rem; color:#64748b; margin:0;">
+          Av. Libertad 63 / Local 28
+        </p>
+      </div>
+      <button onclick="closeDrawer()" aria-label="Cerrar panel" style="
+        width:36px; height:36px; border-radius:50%; border:1px solid rgba(255,255,255,0.1);
+        background:rgba(255,255,255,0.05); color:#94a3b8; cursor:pointer;
+        display:flex; align-items:center; justify-content:center; font-size:1rem;
+        transition: background 0.2s;
+      " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <i class="ph-bold ph-x"></i>
+      </button>
+    </div>
+
+    <!-- ── Stats grid ── -->
+    <div id="stats-container" style="display:flex; flex-direction:column; gap:0.875rem; margin-bottom:1.75rem;">
+
+      <!-- Stat: barberos (carga dinámica) -->
+      <div class="stat-card" id="stat-barberos">
+        <div class="stat-icon">
+          <i class="ph-fill ph-users" style="font-size:1.375rem; color:#34d399;"></i>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#64748b; margin:0 0 0.25rem;">Barberos en local</p>
+          <div id="barberos-count" style="font-size:1.75rem; font-weight:700; color:#fff; line-height:1;">
+            <!-- Skeleton -->
+            <div class="skeleton" style="width:48px; height:28px;"></div>
+          </div>
+          <div id="barberos-status" style="margin-top:0.375rem;">
+            <div class="skeleton" style="width:80px; height:14px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat: local -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="ph-fill ph-map-pin" style="font-size:1.375rem; color:#34d399;"></i>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#64748b; margin:0 0 0.25rem;">Identificador de local</p>
+          <p style="font-size:1rem; font-weight:700; color:#fff; margin:0; font-family:monospace; letter-spacing:0.05em;">ferraza</p>
+          <p style="font-size:0.75rem; color:#64748b; margin:0.25rem 0 0;">Colección Firestore: <code style="color:#34d399;">barberos</code></p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Acciones Rápidas ── -->
+    <div style="margin-bottom: 1.75rem;">
+      <p style="font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#475569; margin:0 0 0.75rem;">Acciones Rápidas</p>
+      <button onclick="addBarberoFlow()" class="btn-secondary">
+        <i class="ph-bold ph-user-plus"></i>
+        Agregar Barbero
+      </button>
+      <button onclick="assignRoleFlow()" class="btn-secondary" style="margin-top: 0.5rem;">
+        <i class="ph-bold ph-shield-check"></i>
+        Asignar Rol
+      </button>
+    </div>
+
+    <!-- ── CTA ── -->
+    <a href="/gestion-interna/index.html?local=ferraza" class="cta-btn">
+      <i class="ph-bold ph-arrow-right"></i>
+      Abrir Gestión Interna
+    </a>
+
+    <!-- Source indicator -->
+    <p id="data-source-label" style="text-align:center; font-size:0.6875rem; color:#475569; margin:0.875rem 0 0; font-weight:500;">
+      Consultando Firestore…
+    </p>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       FIREBASE + LÓGICA
+  ══════════════════════════════════════════ -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="/config.js"></script>
+  <script src="/db.js"></script>
+  <script src="/firebase-config.js"></script>
+  <script src="/firebaseUtils.js?v=2.0"></script>
+
+  <script>
+    // ── Drawer open / close ───────────────────────────────────────────────────
+    let drawerLoaded = false;
+
+    function openDrawer(updateHistory = true) {
+      document.getElementById('drawer-overlay').classList.add('open');
+      document.getElementById('drawer-panel').classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      if (updateHistory) {
+        window.history.pushState({ drawer: 'ferraza' }, '', '/admin/ferraza');
+      }
+
+      if (!drawerLoaded) {
+        drawerLoaded = true;
+        loadFerrazazStats();
+      }
+    }
+
+    function closeDrawer(updateHistory = true) {
+      document.getElementById('drawer-overlay').classList.remove('open');
+      document.getElementById('drawer-panel').classList.remove('open');
+      document.body.style.overflow = '';
+
+      if (updateHistory) {
+        window.history.pushState({ drawer: null }, '', '/admin/');
+      }
+    }
+
+    // Manejar botón atrás / adelante del navegador
+    window.addEventListener('popstate', (event) => {
+      if (event.state && event.state.drawer === 'ferraza') {
+        openDrawer(false);
+      } else {
+        closeDrawer(false);
+      }
+    });
+
+    // Verificar URL al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.location.pathname.includes('/admin/ferraza')) {
+        openDrawer(false);
+      }
+    });
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    // ── Hover glow en el botón ────────────────────────────────────────────────
+    const btnFerraza = document.getElementById('btn-ferraza');
+    const logoGlow   = document.getElementById('logo-glow');
+    btnFerraza.addEventListener('mouseenter', () => logoGlow.style.opacity = '1');
+    btnFerraza.addEventListener('mouseleave', () => logoGlow.style.opacity = '0');
+
+    // ── Consulta Firestore: barberos del local "ferraza" ──────────────────────
+    async function loadFerrazazStats() {
+      const countEl   = document.getElementById('barberos-count');
+      const statusEl  = document.getElementById('barberos-status');
+      const sourceEl  = document.getElementById('data-source-label');
+
+      try {
+        // Primer intento: filtrar por campo local == "ferraza" y activo == true
+        let snap = await db.collection('barberos')
+          .where('local', '==', 'ferraza')
+          .where('activo', '==', true)
+          .get();
+
+        let total = snap.size;
+        let queryUsed = 'local == "ferraza"';
+
+        // Fallback: si ningún documento tiene el campo local,
+        // contamos todos los barberos activos (compatibilidad con datos legacy)
+        if (total === 0) {
+          const fallbackSnap = await db.collection('barberos')
+            .where('activo', '==', true)
+            .get();
+          if (fallbackSnap.size > 0) {
+            total     = fallbackSnap.size;
+            queryUsed = 'activo == true (fallback)';
+          }
+        }
+
+        // Render número
+        countEl.innerHTML = `<span>${total}</span>`;
+        countEl.querySelector('span').style.cssText =
+          'font-size:1.875rem; font-weight:700; color:#fff;';
+
+        // Render badge
+        if (total > 0) {
+          statusEl.innerHTML = `
+            <span class="badge-active">
+              <span class="badge-dot"></span>
+              ${total === 1 ? '1 activo' : `${total} activos`}
+            </span>`;
+        } else {
+          statusEl.innerHTML = `
+            <span class="badge-error">
+              <i class="ph-bold ph-warning"></i>
+              Sin barberos registrados
+            </span>`;
+        }
+
+        sourceEl.textContent = `Datos en tiempo real · Firestore · ${queryUsed}`;
+
+      } catch (err) {
+        console.error('[AdminPanel] Error al leer barberos:', err.message);
+
+        countEl.innerHTML = `<span style="font-size:1.25rem; color:#f87171;">—</span>`;
+        statusEl.innerHTML = `
+          <span class="badge-error">
+            <i class="ph-bold ph-warning"></i>
+            Sin permisos de lectura
+          </span>`;
+        sourceEl.textContent = `Error · ${err.code || err.message}`;
+      }
+    }
+
+    // ── Flujo: Agregar Barbero ────────────────────────────────────────────────
+    async function addBarberoFlow() {
+      const email = window.prompt("Ingresa el correo electrónico del usuario para agregarlo como barbero:");
+      if (!email || !email.trim()) return;
+
+      try {
+        const sourceEl = document.getElementById('data-source-label');
+        const originalSourceText = sourceEl.textContent;
+        sourceEl.textContent = "Buscando usuario...";
+
+        // 1. Buscar en la colección 'users'
+        const userSnap = await db.collection('users')
+          .where('email', '==', email.trim().toLowerCase())
+          .limit(1)
+          .get();
+
+        if (userSnap.empty) {
+          alert("No se encontró ningún usuario con ese correo electrónico.");
+          sourceEl.textContent = originalSourceText;
+          return;
+        }
+
+        const userData = userSnap.docs[0].data();
+        const userUid  = userSnap.docs[0].id;
+        const nombre   = userData.nombre || "Sin nombre";
+
+        // 1.5 Verificar si ya es barbero de este local
+        const barberoSnap = await db.collection('barberos').doc(userUid).get();
+        if (barberoSnap.exists && barberoSnap.data().local === 'ferraza' && barberoSnap.data().activo === true) {
+          alert(`El usuario ${nombre} ya está registrado y activo como barbero en este local.`);
+          sourceEl.textContent = originalSourceText;
+          return;
+        }
+
+        // 2. Confirmar asignación
+        const confirmacion = window.confirm(`Usuario encontrado: ${nombre}\n¿Asignar como nuevo barbero del local ferraza?`);
+        
+        if (confirmacion) {
+          sourceEl.textContent = "Asignando barbero...";
+          
+          // 3. Crear documento en la colección 'barberos'
+          await db.collection('barberos').doc(userUid).set({
+            nombre: nombre,
+            local: 'ferraza',
+            activo: true,
+            creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+
+          alert("✅ Barbero asignado correctamente.");
+          
+          // Refrescar stats
+          loadFerrazazStats();
+        } else {
+          sourceEl.textContent = originalSourceText;
+        }
+
+      } catch (err) {
+        console.error('[Admin] Error en addBarberoFlow:', err);
+        alert("Error: " + err.message);
+      }
+    }
+
+    // ── Flujo: Asignar Rol ────────────────────────────────────────────────────
+    async function assignRoleFlow() {
+      const email = window.prompt("Ingresa el correo electrónico para asignar un rol:");
+      if (!email || !email.trim()) return;
+
+      try {
+        const sourceEl = document.getElementById('data-source-label');
+        const originalSourceText = sourceEl.textContent;
+        sourceEl.textContent = "Buscando en barberos...";
+
+        const emailTarget = email.trim().toLowerCase();
+
+        // 1. Buscar primero en 'barberos' por email
+        let barberoSnap = await db.collection('barberos')
+          .where('email', '==', emailTarget)
+          .limit(1)
+          .get();
+
+        let userUid = null;
+        let nombre = "Sin nombre";
+        let rolActual = "Ninguno";
+
+        if (!barberoSnap.empty) {
+          const doc = barberoSnap.docs[0];
+          userUid = doc.id;
+          nombre = doc.data().nombre || "Sin nombre";
+          rolActual = doc.data().rol || "Sin rol asignado";
+        } else {
+          // 2. Si no está en barberos, buscar en 'users' para obtener UID y nombre
+          sourceEl.textContent = "Buscando en usuarios...";
+          const userSnap = await db.collection('users')
+            .where('email', '==', emailTarget)
+            .limit(1)
+            .get();
+
+          if (userSnap.empty) {
+            alert("No se encontró ningún registro con ese correo electrónico en ninguna colección.");
+            sourceEl.textContent = originalSourceText;
+            return;
+          }
+
+          userUid = userSnap.docs[0].id;
+          nombre = userSnap.docs[0].data().nombre || "Sin nombre";
+        }
+
+        // 3. Preguntar por el nuevo rol
+        const nuevoRolInput = window.prompt(
+          `Usuario: ${nombre}\nRol actual: ${rolActual}\n\nIngresa el nuevo rol (barbero, admin o jefe):`,
+          rolActual === "Ninguno" || rolActual === "Sin rol asignado" ? "barbero" : rolActual
+        );
+
+        if (!nuevoRolInput) {
+          sourceEl.textContent = originalSourceText;
+          return;
+        }
+
+        const rolesValidos = ['barbero', 'admin', 'jefe'];
+        const rolNormalizado = nuevoRolInput.trim().toLowerCase();
+
+        if (!rolesValidos.includes(rolNormalizado)) {
+          alert("Rol no válido. Por favor ingresa: barbero, admin o jefe.");
+          sourceEl.textContent = originalSourceText;
+          return;
+        }
+
+        // 4. Actualizar en Firestore (usando el campo 'rol')
+        sourceEl.textContent = "Actualizando rol...";
+        await db.collection('barberos').doc(userUid).set({
+          rol: rolNormalizado,
+          email: emailTarget, // Asegurar que tenga el email para futuras búsquedas
+          nombre: nombre,
+          local: 'ferraza',
+          activo: true
+        }, { merge: true });
+
+        alert(`✅ Rol "${rolNormalizado}" asignado correctamente a ${nombre}.`);
+        sourceEl.textContent = `Rol ${rolNormalizado} asignado.`;
+        
+        loadFerrazazStats();
+
+      } catch (err) {
+        console.error('[Admin] Error en assignRoleFlow:', err);
+        alert("Error: " + err.message);
+      }
+    }
+
+    // ── Auth check ────────────────────────────────────────────────────────────
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        // Verificar rol admin (desarrollador)
+        const role = await FDB.getRol(user.email, user.uid);
+        if (role !== 'admin') {
+          console.warn('[Admin] Acceso denegado: Rol insuficiente');
+          document.getElementById('unauthorized-screen').classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        } else {
+          console.log('[Admin] Acceso concedido: Desarrollador verificado');
+          document.getElementById('unauthorized-screen').classList.add('hidden');
+        }
+      } else {
+        // No hay sesión: mostrar bloqueo
+        document.getElementById('unauthorized-screen').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Opcional: Redirigir a login después de un momento
+        // setTimeout(() => window.location.href = '/gestion-interna/login/', 3000);
+      }
+    });
+  </script>
+
+</body>
+</html>

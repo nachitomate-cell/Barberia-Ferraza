@@ -1,0 +1,35 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Función para validar que el usuario está logueado
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Reglas para la carpeta barberos/
+    match /barberos/{imageId} {
+      // Cualquier persona puede ver las fotos de los barberos
+      allow read: if true;
+      
+      // Solo usuarios autenticados (los admins/barberos en sesión) pueden subir fotos
+      allow write: if isAuth() 
+                   && request.resource.size < 5 * 1024 * 1024 // max 5MB
+                   && request.resource.contentType.matches('image/.*'); // solo imágenes
+    }
+
+    // Reglas para la galería lookbook
+    match /lookbook/{imageId} {
+      allow read: if true;
+      allow write: if isAuth() 
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Bloquear todo lo demás por defecto
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

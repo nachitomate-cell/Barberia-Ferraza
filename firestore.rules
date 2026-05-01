@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admins iniciales (bootstrap) reconocidos por email verificado
+    function esBootstrapAdmin() {
+      return request.auth != null
+          && (request.auth.token.email == 'ignaciiio.mate@gmail.com'
+           || request.auth.token.email == 'barrazanicolasfabian@gmail.com');
+    }
+
+    // Un usuario es barbero si: es bootstrap admin, o su UID existe en /barberos con activo==true
+    function esBarbero() {
+      return esBootstrapAdmin()
+          || (request.auth != null
+              && exists(/databases/$(database)/documents/barberos/$(request.auth.uid))
+              && get(/databases/$(database)/documents/barberos/$(request.auth.uid)).data.activo == true);
+    }
+
+    // ── Colección /barberos ───────────────────────────────────────────────────
+    // • Lectura propia: cualquier usuario autenticado puede leer SU documento
+    //   (necesario para que la app verifique si tiene acceso a gestion-interna).
+    // • Escritura: solo barberos ya activos pueden gestionar otros barberos.
+    match /barberos/{barberoId} {
+      // Lectura pública: cualquier visitante puede ver la lista de barberos
+      allow read: if true;
+      // Escritura: barberos activos o bootstrap admins
+      allow write: if esBarbero();
+      
+      // Permitir acceso a subcolecciones (como configuracion)
+      match /{document=**} {
+        allow read: if true;
+        allow write: if esBarbero();
+      }
+    }
+
+    // ── Colección /citas ──────────────────────────────────────────────────────
+    // Solo barberos tienen acceso completo.
+    // Clientes autenticados pueden crear su propia cita (booking público).
+    match /citas/{citaId} {
+      allow read, write: if esBarbero();
+      allow create: if request.auth != null;
+    }
+
+    // ── Colecciones de solo-lectura pública (widget de reservas) ─────────────
+    match /servicios/{doc} {
+      allow read: if true;
+      allow write: if esBarbero();
+    }
+
+    match /configuracion/{doc} {
+      allow read: if true;
+      allow write: if esBarbero();
+    }
+
+    match /bloqueos/{doc} {
+      allow read: if true;
+      allow write: if esBarbero();
+    }
+
+    match /premios/{doc} {
+      allow read: if true;
+      allow write: if esBarbero();
+    }
+
+    // ── Tokens FCM ────────────────────────────────────────────────────────────
+    match /fcm_tokens/{tokenId} {
+      allow read: if esBarbero();
+      allow write: if request.auth != null;
+    }
+
+    // ── Galería Lookbook ──────────────────────────────────────────────────────
+    match /lookbook/{docId} {
+      allow read: if true;
+      allow write: if esBarbero();
+    }
+
+    // ── Usuarios / Clientes ───────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+          && (request.auth.uid == userId || esBarbero());
+    }
+  }
+}

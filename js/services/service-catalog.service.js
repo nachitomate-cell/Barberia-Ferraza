@@ -8,17 +8,6 @@
         { id: 'srv-ferraza-2', nombre: 'Barba Premium', precio: 10000, duracion: 30, activo: true, orden: 1 },
         { id: 'srv-ferraza-3', nombre: 'Corte + Barba', precio: 22000, duracion: 90, activo: true, orden: 2 },
       ],
-      navaja: [
-        { id: 'srv-navaja-1', nombre: 'Fade Clasico', precio: 16000, duracion: 45, activo: true, orden: 0 },
-        { id: 'srv-navaja-2', nombre: 'Barba con Toallas', precio: 12000, duracion: 30, activo: true, orden: 1 },
-        { id: 'srv-navaja-3', nombre: 'Perfilado Express', precio: 9000, duracion: 30, activo: true, orden: 2 },
-        { id: 'srv-navaja-4', nombre: 'Corte + Ritual', precio: 24000, duracion: 45, activo: true, orden: 3 },
-      ],
-      'brows-kelly': [
-        { id: 'srv-kelly-1', nombre: 'Epilacion de Cejas', precio: 18000, duracion: 30, activo: true, orden: 0 },
-        { id: 'srv-kelly-2', nombre: 'Laminado + Diseno', precio: 28000, duracion: 60, activo: true, orden: 1 },
-        { id: 'srv-kelly-3', nombre: 'Micropigmentacion', precio: 120000, duracion: 120, activo: true, orden: 2 },
-      ],
     };
 
     return mocks[tenantId] || mocks.ferraza;

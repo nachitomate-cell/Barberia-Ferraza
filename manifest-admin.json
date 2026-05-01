@@ -2,7 +2,7 @@
   "name": "Panel Administrativo — Ferraza",
   "short_name": "Admin Ferraza",
   "description": "Panel de administración de Barbería Ferraza",
-  "start_url": "/gestion-interna.html",
+  "start_url": "/gestion-interna/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

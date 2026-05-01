@@ -20,9 +20,11 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE ─────────────────────────────────────────────────────
-const CACHE_VERSION = 'ferraza-v9';
+const CACHE_VERSION = 'ferraza-v10';
 const STATIC_ASSETS = [
-  '/gestion-interna.html',
+  '/admin/',
+  '/gestion-interna/',
+  '/logo.jpg',
   '/output.css',
   '/firebase-config.js',
   '/firebaseUtils.js',
@@ -74,11 +76,23 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(event.request, clone));
+          // Solo cachear respuestas exitosas (no 404s)
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(c => c.put(event.request, clone));
+          }
           return res;
         })
-        .catch(() => caches.match(event.request))
+        .catch(async () => {
+          // Sin red: intentar caché, luego shell de la app
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          // SPA fallback: servir el shell principal según la ruta
+          if (url.pathname.startsWith('/gestion-interna')) {
+            return caches.match('/gestion-interna/') || caches.match('/gestion-interna/index.html');
+          }
+          return caches.match('/') || caches.match('/index.html');
+        })
     );
   } else {
     // Cache-first: CSS, JS, imágenes locales
@@ -86,10 +100,13 @@ self.addEventListener('fetch', event => {
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(event.request, clone));
+          // Solo cachear respuestas exitosas
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(c => c.put(event.request, clone));
+          }
           return res;
-        });
+        }).catch(() => new Response('', { status: 503 }));
       })
     );
   }
@@ -112,7 +129,7 @@ messaging.onBackgroundMessage(payload => {
     tag:     'nueva-cita',          // colapsa notificaciones duplicadas
     renotify: true,
     data: {
-      url: payload.data?.url || '/gestion-interna.html',
+      url: payload.data?.url || '/gestion-interna/',
       citaId: payload.data?.citaId || null
     },
     actions: [
@@ -127,7 +144,7 @@ messaging.onBackgroundMessage(payload => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/gestion-interna.html';
+  const targetUrl = event.notification.data?.url || '/gestion-interna/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
@@ -160,7 +177,7 @@ self.addEventListener('push', event => {
     body:  data.body  || 'Nueva notificación',
     icon:  '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data:  { url: data.url || '/gestion-interna.html' }
+    data:  { url: data.url || '/gestion-interna/' }
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

@@ -12,7 +12,12 @@
       "Bash(node_modules/.bin/tailwindcss -i input.css -o output.css --minify)",
       "Bash(node_modules/.bin/tailwindcss -c tailwind-lookbook.config.js -i input.css -o output-lookbook.css --minify)",
       "Bash(vercel --version)",
-      "Bash(vercel --prod --force)"
+      "Bash(vercel --prod --force)",
+      "Bash(firebase --version)",
+      "Bash(npm --version)",
+      "Bash(firebase login:list:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase functions:artifacts:setpolicy --force)"
     ]
   }
 }

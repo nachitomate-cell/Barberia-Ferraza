@@ -1,0 +1,18 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/agenda", "destination": "/agenda.html" },
+    { "source": "/agenda/**", "destination": "/agenda.html" },
+    { "source": "/servicios", "destination": "/index.html" },
+    { "source": "/gestion-interna", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/agenda", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/servicios", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/configuracion", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/clientes", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/clientes/**", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/barberos", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/premios", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/lookbook", "destination": "/gestion-interna/index.html" },
+    { "source": "/gestion-interna/ferraza", "destination": "/gestion-interna/index.html" }
+  ]
+}

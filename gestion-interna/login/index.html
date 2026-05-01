@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Login | Panel Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="/output.css" rel="stylesheet">
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+  <script src="/config.js"></script>
+  <script src="/db.js"></script>
+  <script src="/firebaseUtils.js?v=1.9"></script>
+
+  <style>
+    body {
+      background-color: #050505;
+      color: #F9FAFB;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    /* Background Image with Overlay */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url('/ferraza.webp');
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+      filter: saturate(1.2);
+    }
+
+    .glass-login {
+      background: rgba(31, 41, 55, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    :root {
+      --admin-accent: #34d399;
+      --admin-bg: #111827;
+      --admin-card: #1f2937;
+      --admin-border: rgba(255,255,255,0.08);
+    }
+
+    /* Force input visibility */
+    #loginEmail, #loginPassword {
+      background-color: #FFFFFF !important;
+      color: #000000 !important;
+    }
+    #loginEmail::placeholder, #loginPassword::placeholder {
+      color: #9CA3AF !important;
+    }
+
+  </style>
+</head>
+
+<body class="px-4">
+  <!-- Pantalla de Carga -->
+  <div id="loadingOverlay" class="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#111827] hidden transition-opacity duration-300">
+    <div class="w-12 h-12 border-4 border-emerald-400/20 border-t-emerald-400 rounded-full animate-spin mb-4"></div>
+    <p class="text-white font-medium animate-pulse">Validando credenciales...</p>
+  </div>
+  <div class="flex flex-col items-center w-full max-w-sm relative z-10">
+    <img src="/logo.jpg" alt="Logo" class="w-24 h-24 object-contain mb-8 rounded-full border-2 border-white/20 shadow-2xl">
+    
+    <div id="loginOverlay" class="w-full glass-login rounded-2xl p-8 shadow-2xl">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-emerald-400/10 flex items-center justify-center">
+          <i class="ph-fill ph-scissors text-xl text-emerald-400"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 font-medium uppercase tracking-widest">Panel Admin</p>
+          <h1 id="loginShopName" class="text-lg font-bold text-white">(Barberia ferraza)</h1>
+        </div>
+      </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold text-gray-400 mb-1.5 block uppercase tracking-wider">Correo</label>
+        <input id="loginEmail" type="email" placeholder="admin@barberia.cl" autocomplete="email"
+          class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all shadow-sm">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-400 mb-1.5 block uppercase tracking-wider">Contraseña</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"
+          class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all shadow-sm">
+      </div>
+
+      <p id="loginError" class="text-red-400 text-xs hidden"></p>
+
+      <button id="loginBtn" onclick="adminLogin()"
+        class="w-full bg-emerald-400 text-[#111827] font-bold py-3 rounded-xl hover:bg-emerald-300 transition-colors text-sm mt-2">
+        Ingresar
+      </button>
+    </div>
+    </div>
+  </div>
+
+  <script>
+    // Cargar nombre de la tienda
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.SHOP) {
+        document.getElementById('loginShopName').textContent = SHOP.nombre;
+        document.title = `Login | ${SHOP.nombre}`;
+      }
+      
+      ['loginEmail', 'loginPassword'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if (e.key === 'Enter') adminLogin();
+        });
+      });
+    });
+
+    // Redirigir si ya está logueado
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        // Mostrar pantalla de carga mientras validamos sesión existente
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        
+        const isBarbero = await FDB.esBarbero(user.email, user.uid);
+        
+        if (isBarbero) {
+          const isAdmin = await FDB.esAdminJefe(user.email, user.uid);
+          if (isAdmin) {
+            window.location.href = '/gestion-interna/';
+          } else {
+            const barberId = await FDB.getBarberoId(user.email, user.uid) || user.uid;
+            window.location.href = `/agenda/${barberId}`;
+          }
+        } else {
+          // Es un cliente normal, redirigir al portal de clientes sin cerrar sesión
+          window.location.href = '/dashboard';
+        }
+      }
+    });
+
+    async function adminLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+      
+      if (!email || !password) return;
+
+      errEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Ingresando…';
+      
+      // Mostrar pantalla de carga
+      const loader = document.getElementById('loadingOverlay');
+      loader.classList.remove('hidden');
+
+      try {
+        const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+        
+        const isBarbero = await FDB.esBarbero(cred.user.email, cred.user.uid);
+        
+        if (isBarbero) {
+          // Redirección manejada por onAuthStateChanged
+        } else {
+          window.location.href = '/dashboard';
+        }
+        
+        // Redirección manejada por onAuthStateChanged
+      } catch (e) {
+        console.error(e);
+        let msg = 'Credenciales incorrectas.';
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') msg = 'Correo o contraseña incorrectos.';
+        else if (e.code === 'auth/invalid-email') msg = 'Formato de correo inválido.';
+        else if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Intenta más tarde.';
+        else if (e.code === 'auth/not-authorized') msg = 'No tienes permiso para acceder al panel.';
+        showError(msg);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+        // Ocultar pantalla de carga si hubo error (si no hubo, se redirige)
+        document.getElementById('loadingOverlay').classList.add('hidden');
+      }
+    }
+
+    function showError(msg) {
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

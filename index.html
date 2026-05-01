@@ -39,7 +39,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseUtils.js"></script>
+  <script src="firebaseUtils.js?v=2.0"></script>
 
 
   <style>
@@ -119,16 +119,19 @@
         <div id="servicesSkeleton" class="grid grid-cols-2 gap-4">
           <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
           <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
         </div>
-        <div class="grid grid-cols-2 gap-4" id="servicesGrid">
+        <div class="flex flex-col gap-6" id="servicesGrid">
         </div>
       </section>
 
       <!-- PASO 2 -->
       <section id="step2" class="hidden opacity-0 transform translate-x-12">
         <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona tu Barbero</h2>
+        <!-- Skeleton visible mientras carga Firestore -->
+        <div id="barberosSkeleton" class="flex flex-col gap-4">
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+        </div>
         <div id="barberosGrid" class="flex flex-col gap-4"></div>
       </section>
 
@@ -299,22 +302,46 @@
       if (skeleton) skeleton.style.display = 'none';
       const grid = document.getElementById('servicesGrid');
       grid.innerHTML = '';
-      services.forEach((s, i) => {
-        const icon = _ICONS[i % _ICONS.length];
-        const cat = s.categoria || 'Otro';
-        grid.innerHTML += `
-          <button onclick="selectService(this)" data-service-id="${s.id}" data-category="${cat}"
-            class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
-            <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
-            <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
-              <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
-            </div>
-            <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
-            <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
-            <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
-              <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
-            </span>
-          </button>`;
+      
+      const categories = {};
+      services.forEach(s => {
+        const cat = s.categoria || 'Otros';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(s);
+      });
+
+      Object.keys(categories).forEach(cat => {
+        // Contenedor de la categoría (útil para el filtro de pills)
+        const catContainer = document.createElement('div');
+        catContainer.className = "category-section col-span-2 mb-2";
+        catContainer.dataset.category = cat;
+        
+        // Título de la colección/categoría
+        catContainer.innerHTML = `<h3 class="text-lg font-bold text-white mb-4 pl-1 border-l-4 border-neon rounded-sm">${cat}</h3>`;
+        
+        // Grid interno para los servicios de esta categoría
+        const innerGrid = document.createElement('div');
+        innerGrid.className = "grid grid-cols-2 gap-4";
+        
+        categories[cat].forEach((s, i) => {
+          const icon = _ICONS[i % _ICONS.length];
+          innerGrid.innerHTML += `
+            <button onclick="selectService(this)" data-service-id="${s.id}" data-category="${cat}"
+              class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
+              <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
+              <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
+                <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
+              </div>
+              <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
+              <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
+              <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
+                <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
+              </span>
+            </button>`;
+        });
+        
+        catContainer.appendChild(innerGrid);
+        grid.appendChild(catContainer);
       });
     }
 
@@ -350,15 +377,15 @@
     }
 
     function filterServicesByCategory(category) {
-      const allButtons = document.querySelectorAll('.service-option');
-      allButtons.forEach(btn => {
+      const allSections = document.querySelectorAll('.category-section');
+      allSections.forEach(section => {
         if (category === 'Todos') {
-          btn.style.display = 'flex';
+          section.style.display = 'block';
         } else {
-          if (btn.dataset.category === category) {
-            btn.style.display = 'flex';
+          if (section.dataset.category === category) {
+            section.style.display = 'block';
           } else {
-            btn.style.display = 'none';
+            section.style.display = 'none';
           }
         }
       });
@@ -369,7 +396,7 @@
       try {
         const today = new Date();
         const months = new Set();
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 60; i++) {
           const d = new Date(today);
           d.setDate(today.getDate() + i);
           months.add(`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`);
@@ -383,30 +410,93 @@
       }
     }
 
+    let _fsBarberos      = [];
+
+    function _renderBarberos(barberos) {
+      const skeleton = document.getElementById('barberosSkeleton');
+      if (skeleton) skeleton.style.display = 'none';
+      const grid = document.getElementById('barberosGrid');
+      if (!barberos || barberos.length === 0) {
+         grid.innerHTML = '<p class="text-sm text-gray-500">No hay barberos disponibles en este momento.</p>';
+         return;
+      }
+      grid.innerHTML = barberos.map(b => {
+        const fotoHTML = b.foto 
+          ? `<img src="${b.foto}" alt="Foto de ${b.nombre}" class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">`
+          : `<div class="w-20 h-20 rounded-full flex items-center justify-center border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]"><i class="ph-fill ph-user text-3xl text-gray-400"></i></div>`;
+          
+        const isSelected = window._selectedBarber === b.nombre;
+        const stateClass = isSelected ? 'border-neon bg-brand-neon/10' : 'border-brand-accent/20 bg-[#0a0a0d]';
+        
+        const especialidadHTML = b.especialidad 
+          ? `<p class="text-xs text-gray-400 font-medium mb-2 relative z-10 uppercase tracking-widest">${b.especialidad}</p>` 
+          : '';
+        
+        const disponibilidadString = b.disponible !== false ? 'Disponible para reservas' : 'Agenda llena hoy';
+        const isAvailableIcon = b.disponible !== false ? 'check-circle' : 'x-circle';
+
+        return `
+        <button onclick="selectBarber(this, '${b.id}', '${b.nombre}')" class="barber-option relative flex w-full flex-col items-center justify-center p-6 rounded-2xl border-2 ${stateClass} shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
+          <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
+          ${fotoHTML}
+          <span class="font-bold text-gray-100 text-lg mb-0.5 relative z-10 tracking-wide">${b.nombre}</span>
+          ${especialidadHTML}
+          <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
+            <i class="ph-fill ph-${isAvailableIcon} text-[16px]"></i>
+            ${disponibilidadString}
+          </span>
+        </button>
+      `}).join('');
+      
+      if (!window._selectedBarber) {
+        const disponible = barberos.find(b => b.disponible !== false);
+        if (disponible) {
+          window._selectedBarber = disponible.nombre;
+          window._selectedBarberId = disponible.id;
+          document.getElementById('summaryBarber').textContent = disponible.nombre;
+          _renderBarberos(barberos); // Re-render para aplicar estilos de selección
+        }
+      }
+    }
+
+    function selectBarber(btn, id, nombre) {
+      document.querySelectorAll('.barber-option').forEach(el => {
+        el.classList.replace('border-neon', 'border-brand-accent/20');
+        el.classList.replace('bg-brand-neon/10', 'bg-[#0a0a0d]');
+      });
+      btn.classList.replace('border-brand-accent/20', 'border-neon');
+      btn.classList.replace('bg-[#0a0a0d]', 'bg-brand-neon/10');
+      
+      window._selectedBarber = nombre;
+      window._selectedBarberId = id;
+      document.getElementById('summaryBarber').textContent = nombre;
+    }
+
     async function initServices() {
       try {
         _fsConfig   = await FDB.getConfig();
         _fsServices = await FDB.getServicios();
-        // Fallback a localStorage si Firestore vacío
+        _fsBarberos = await FDB.getBarberos();
         if (!_fsServices.length) _fsServices = DB.getServices();
+        if (!_fsBarberos.length) _fsBarberos = SHOP.barberos;
       } catch(e) {
-        console.warn('[Reservar] Firestore no disponible, usando localStorage:', e.message);
+        console.warn('[Reservar] Firestore no disponible, usando localStorage/config:', e.message);
         _fsConfig   = DB.getSettings();
         _fsServices = DB.getServices();
+        _fsBarberos = SHOP.barberos;
       }
-      // Exponer globalmente para que selectService() pueda acceder
-      // desde atributos onclick (que ejecutan en scope global, no en closure)
       window._fsServices = _fsServices;
       await precargarBloqueos();
       renderCategories(_fsServices);
       _renderServicesGrid(_fsServices);
+      _renderBarberos(_fsBarberos);
     }
 
-    function renderCalendar() {
+    function renderCalendar(customConfig = null) {
       const carousel = document.querySelector('#calendarCarousel');
       carousel.innerHTML = '';
       const today = new Date();
-      const settings = _fsConfig || DB.getSettings();
+      const settings = customConfig || _fsConfig || DB.getSettings();
 
       const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -415,9 +505,13 @@
 
       let firstSelectableSet = false;
 
-      for (let i = 0; i < 14; i++) {
+      let daysAdded = 0;
+      let dayOffset = 0;
+
+      while (daysAdded < 20 && dayOffset < 60) { // Limit to 60 days max to avoid infinite loop
         let d = new Date(today);
-        d.setDate(today.getDate() + i);
+        d.setDate(today.getDate() + dayOffset);
+        dayOffset++;
 
         let m = (d.getMonth() + 1).toString().padStart(2, '0');
         let dayStr = d.getDate().toString().padStart(2, '0');
@@ -430,11 +524,9 @@
                        !!_bloqueosProximos[dateStr];
 
         if (disabled) {
-          carousel.innerHTML += `<button class="day-btn flex-shrink-0 w-16 h-[5.5rem] rounded-2xl bg-[#0a0a0d] border border-gray-800 flex flex-col items-center justify-center text-center opacity-30 pointer-events-none">
-                <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">${daysOfWeek[dw]}</span>
-                <span class="text-2xl font-bold text-gray-600 day-num">${d.getDate()}</span>
-              </button>`;
+          continue;
         } else {
+          daysAdded++;
           let activeClass = !firstSelectableSet ? 'active bg-brand-neon/10 border-neon shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-[#0a0a0d] border-brand-accent/20 hover:border-brand-neon/50 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)]';
           let textSpan1 = !firstSelectableSet ? 'text-neon' : 'text-gray-400';
           let textSpan2 = !firstSelectableSet ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]' : 'text-gray-300';
@@ -478,21 +570,40 @@
       renderHours();
     }
 
-    async function renderHours() {
+    async function renderHours(customConfig = null) {
       if (!selectedServiceObj) return;
 
       const grid = document.getElementById('hoursGrid');
       grid.innerHTML = '<p class="text-xs text-brand-neon/40 col-span-3">Cargando horarios…</p>';
 
+      const settings = customConfig || _fsConfig || DB.getSettings();
       let hours = [];
       try {
-        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, _fsConfig);
+        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, settings);
       } catch(e) {
         // Fallback a localStorage si no hay conexión
         hours = DB.getAvailableHours(currentDateStr, selectedServiceObj.duracion);
       }
 
       grid.innerHTML = '';
+
+      // Filtrar horas pasadas si es hoy
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+      
+      if (currentDateStr === todayStr) {
+        const nowMs = now.getTime();
+        hours = hours.filter(h => {
+          const [hHour, hMin] = h.time.split(':').map(Number);
+          const hDate = new Date(now);
+          hDate.setHours(hHour, hMin, 0, 0);
+          
+          // Debe haber al menos 15 minutos de diferencia
+          const diffMins = (hDate.getTime() - nowMs) / (1000 * 60);
+          return diffMins >= 15;
+        });
+      }
+
       if (hours.length === 0) {
         grid.innerHTML = `<p class="text-sm text-brand-neon/60">No hay horas disponibles este día.</p>`;
         return;
@@ -597,8 +708,17 @@
         updateProgress();
 
       } else if (currentStep === 2) {
-        renderCalendar();
-        renderHours();
+        const barId = window._selectedBarberId;
+        if (barId) {
+          // Intentar cargar config específica del barbero
+          const barCfg = await FDB.getConfigBarbero(barId);
+          // Si el barbero no tiene config personalizada, se usa la global
+          renderCalendar(barCfg);
+          renderHours(barCfg);
+        } else {
+          renderCalendar();
+          renderHours();
+        }
 
         transitionStep(2, 3);
         currentStep = 3;
@@ -739,28 +859,6 @@
       document.getElementById('shopClubNombre').textContent = SHOP.club;
       document.getElementById('shopDireccion').textContent = SHOP.direccion;
       document.getElementById('shopHorario').textContent = SHOP.horario;
-
-      // Renderizar barberos
-      const grid = document.getElementById('barberosGrid');
-      grid.innerHTML = SHOP.barberos.map(b => `
-        <div class="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-neon bg-brand-neon/5 shadow-[0_0_20px_rgba(255,255,255,0.2)] text-center overflow-hidden">
-          <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
-          <img src="${b.foto}" alt="Foto de ${b.nombre}"
-            class="w-20 h-20 rounded-full object-cover border border-[#F9E7B3]/60 shadow-[0_0_15px_rgba(249,231,179,0.3)] mb-4 relative z-10 bg-[#111115]">
-          <span class="font-bold text-gray-100 text-lg mb-1 relative z-10 tracking-wide">${b.nombre}</span>
-          <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
-            <i class="ph-fill ph-check-circle text-[16px]"></i>
-            ${b.disponible ? 'Barbero Disponible' : 'No Disponible'}
-          </span>
-        </div>
-      `).join('');
-
-      // Seleccionar barbero automáticamente si hay uno solo disponible
-      const disponible = SHOP.barberos.find(b => b.disponible);
-      if (disponible) {
-        document.getElementById('summaryBarber').textContent = disponible.nombre;
-        window._selectedBarber = disponible.nombre;
-      }
     }
 
     window.addEventListener('DOMContentLoaded', async () => {

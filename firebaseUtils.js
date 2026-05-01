@@ -18,6 +18,7 @@ const FDB = (() => {
     USERS:     'users',
     BLOQUEOS:  'bloqueos',
     PREMIOS:   'premios',
+    BARBEROS:  'barberos',
   };
 
   const configRef = () => db.collection(COL.CONFIG).doc('main');
@@ -106,6 +107,41 @@ const FDB = (() => {
       }
     }
 
+    // ── Barberos (Permisos) ──────────────────────────────────────
+    const snapBarberos = await db.collection(COL.BARBEROS).limit(1).get();
+    if (snapBarberos.empty) {
+      console.info('[FDB] Inicializando colección de barberos…');
+      const initialBarberos = [
+        { email: 'ignaciiio.mate@gmail.com' },
+        { email: 'barrazanicolasfabian@gmail.com' },
+        { uid: 'MRbgFWo4dtUoauZea2YhkYXcjtJ3' },
+        { uid: 'oQicdNhcCwbTFXU7NyNyfNeeXqZ2' }
+      ];
+      const batch = db.batch();
+      initialBarberos.forEach(b => {
+        const id = b.uid || db.collection(COL.BARBEROS).doc().id;
+        const ref = db.collection(COL.BARBEROS).doc(id);
+        batch.set(ref, { 
+          email: b.email ? b.email.toLowerCase() : null, 
+          uid: b.uid || null,
+          activo: true 
+        }, { merge: true });
+      });
+      await batch.commit();
+    }
+
+    // Asegurar que los UIDs específicos solicitados existan (fuera del flag de migración general)
+    try {
+      const uids = ['MRbgFWo4dtUoauZea2YhkYXcjtJ3', 'oQicdNhcCwbTFXU7NyNyfNeeXqZ2'];
+      for (const uid of uids) {
+        const doc = await db.collection(COL.BARBEROS).doc(uid).get();
+        if (!doc.exists) {
+          await db.collection(COL.BARBEROS).doc(uid).set({ uid: uid, activo: true }, { merge: true });
+          console.info(`[FDB] Barbero por UID agregado: ${uid}`);
+        }
+      }
+    } catch (e) { console.warn('[FDB] Error asegurando UIDs:', e); }
+
     localStorage.setItem(FLAG, '1');
     console.info('[FDB] Migración completada.');
   }
@@ -114,8 +150,14 @@ const FDB = (() => {
      SERVICIOS
      ────────────────────────────────────────────────────────────── */
   async function getServicios() {
-    const snap = await db.collection(COL.SERVICIOS).orderBy('orden').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try {
+      const snap = await db.collection(COL.SERVICIOS).orderBy('orden').get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (_) {
+      // Fallback si no existe campo 'orden' en los documentos
+      const snap = await db.collection(COL.SERVICIOS).get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
   }
 
   async function addServicio({ nombre, precio, duracion, categoria }) {
@@ -172,13 +214,22 @@ const FDB = (() => {
   });
 
   async function getConfig() {
-    const snap = await configRef().get();
-    if (!snap.exists) {
-      const def = _defaultConfig();
-      await configRef().set(def);
-      return def;
+    try {
+      const snap = await configRef().get();
+      if (!snap.exists) {
+        // Solo intentar crear si estamos logueados y es posible escribir
+        if (firebase.auth().currentUser) {
+          const def = _defaultConfig();
+          await configRef().set(def).catch(() => {});
+          return def;
+        }
+        return _defaultConfig();
+      }
+      return { ..._defaultConfig(), ...snap.data() };
+    } catch (e) {
+      // Si falla por permisos o red, devolver default para no romper la app
+      return _defaultConfig();
     }
-    return { ..._defaultConfig(), ...snap.data() };
   }
 
   async function updateConfig(data) {
@@ -190,6 +241,32 @@ const FDB = (() => {
     return configRef().onSnapshot(snap => {
       if (snap.exists) callback({ ..._defaultConfig(), ...snap.data() });
     }, err => console.error('[FDB] onConfigChange:', err));
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     CONFIGURACIÓN POR BARBERO — barberos/{barberoid}/configuracion/main
+     ────────────────────────────────────────────────────────────── */
+  const _barberConfigRef = (barberoid) =>
+    db.collection(COL.BARBEROS).doc(barberoid).collection('configuracion').doc('main');
+
+  async function getConfigBarbero(barberoid) {
+    try {
+      const snap = await _barberConfigRef(barberoid).get();
+      return snap.exists ? { ..._defaultConfig(), ...snap.data() } : _defaultConfig();
+    } catch (e) {
+      console.error('[FDB] getConfigBarbero:', e);
+      return _defaultConfig();
+    }
+  }
+
+  async function updateConfigBarbero(barberoid, data) {
+    await _barberConfigRef(barberoid).set(data, { merge: true });
+  }
+
+  function onConfigBarberoChange(barberoid, callback) {
+    return _barberConfigRef(barberoid).onSnapshot(snap => {
+      callback(snap.exists ? { ..._defaultConfig(), ...snap.data() } : _defaultConfig());
+    }, err => console.error('[FDB] onConfigBarberoChange:', err));
   }
 
   /* ──────────────────────────────────────────────────────────────
@@ -314,6 +391,13 @@ const FDB = (() => {
     return ref.id;
   }
 
+  async function updatePremio(id, data) {
+    await db.collection(COL.PREMIOS).doc(id).update({
+      ...data,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
   async function deletePremio(id) {
     await db.collection(COL.PREMIOS).doc(id).delete();
   }
@@ -432,6 +516,141 @@ const FDB = (() => {
     return (await ref.get()).data();
   }
 
+  /* ──────────────────────────────────────────────────────────────
+     BARBEROS / PERMISOS
+     ────────────────────────────────────────────────────────────── */
+  async function getBarberos() {
+    try {
+      const snap = await db.collection(COL.BARBEROS).get();
+      return snap.docs
+        .map(doc => {
+          const d = doc.data();
+          // Construir nombre de display robusto
+          const nombre = d.nombre || d.displayName || (d.email ? d.email.split('@')[0] : null) || 'Barbero';
+          return { id: doc.id, nombre, foto: d.foto || d.photoURL || null, disponible: d.disponible !== false, ...d };
+        })
+        .filter(b => b.activo !== false)
+        .sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.nombre.localeCompare(b.nombre));
+    } catch (e) {
+      console.error('[FDB] Error obteniendo barberos:', e);
+      return [];
+    }
+  }
+
+  async function esBarbero(email, uid) {
+    const BOOTSTRAP_ADMINS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
+    try {
+      // 0. Bootstrap: Permitir siempre a los admins originales para que puedan inicializar la BD
+      if (email && BOOTSTRAP_ADMINS.includes(email.toLowerCase())) return true;
+
+      // 1. Verificar por UID (más seguro y directo)
+      if (uid) {
+        const doc = await db.collection(COL.BARBEROS).doc(uid).get();
+        if (doc.exists && doc.data().activo !== false) return true;
+      }
+      if (email) {
+        const snap = await db.collection(COL.BARBEROS).get();
+        const targetEmail = email.toLowerCase();
+        const doc = snap.docs.find(d => {
+          const data = d.data();
+          if (data.activo === false) return false;
+          const docEmail = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+          return docEmail === targetEmail;
+        });
+        if (doc) return true;
+        
+        // Debugging temporal: Si no lo encuentra, mostrar qué correos SÍ están en la colección barberos y su estado activo
+        const correos = snap.docs.map(d => `${d.data().email || 'Sin correo'} (activo: ${d.data().activo})`).join('\n');
+        alert(`Depuración: Tu correo es "${email}". \nCorreos encontrados en 'barberos': \n${correos}\n\nSi ves tu correo pero dice "activo: false", significa que el barbero está DESACTIVADO en la base de datos y por eso se rechaza el inicio de sesión.`);
+      }
+      return false;
+    } catch (e) {
+      console.error('[FDB] Error verificando barbero:', e);
+      return false;
+    }
+  }
+
+  async function getBarberoId(email, uid) {
+    try {
+      if (uid) {
+        const doc = await db.collection(COL.BARBEROS).doc(uid).get();
+        if (doc.exists && doc.data().activo !== false) return uid;
+      }
+      if (email) {
+        const snap = await db.collection(COL.BARBEROS).get();
+        const targetEmail = email.toLowerCase();
+        const doc = snap.docs.find(d => {
+          const data = d.data();
+          if (data.activo === false) return false;
+          const docEmail = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+          return docEmail === targetEmail;
+        });
+        if (doc) return doc.id;
+      }
+      return null;
+    } catch (e) {
+      console.error('[FDB] Error obteniendo ID de barbero:', e);
+      return null;
+    }
+  }
+
+  async function esAdminJefe(email, uid) {
+    const BOOTSTRAP_ADMINS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
+    try {
+      if (email && BOOTSTRAP_ADMINS.includes(email.toLowerCase())) return true;
+
+      if (uid) {
+        const doc = await db.collection(COL.BARBEROS).doc(uid).get();
+        if (doc.exists && doc.data().activo !== false) {
+          const rol = doc.data().rol;
+          return rol === 'admin' || rol === 'jefe';
+        }
+      }
+      if (email) {
+        const snap = await db.collection(COL.BARBEROS).get();
+        const targetEmail = email.toLowerCase();
+        const doc = snap.docs.find(d => {
+          const data = d.data();
+          if (data.activo === false) return false;
+          const docEmail = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+          return docEmail === targetEmail;
+        });
+        if (doc) {
+          const rol = doc.data().rol;
+          return rol === 'admin' || rol === 'jefe';
+        }
+      }
+      return false;
+    } catch (e) {
+      console.error('[FDB] Error verificando admin/jefe:', e);
+      return false;
+    }
+  }
+
+  async function getRol(email, uid) {
+    const BOOTSTRAP_ADMINS = ['ignaciiio.mate@gmail.com', 'barrazanicolasfabian@gmail.com'];
+    if (email && BOOTSTRAP_ADMINS.includes(email.toLowerCase())) return 'admin';
+    try {
+      if (uid) {
+        const doc = await db.collection(COL.BARBEROS).doc(uid).get();
+        if (doc.exists) return doc.data().rol || 'barbero';
+      }
+      if (email) {
+        const snap = await db.collection(COL.BARBEROS).get();
+        const targetEmail = email.toLowerCase();
+        const doc = snap.docs.find(d => {
+          const data = d.data();
+          const docEmail = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+          return docEmail === targetEmail;
+        });
+        if (doc) return doc.data().rol || 'barbero';
+      }
+      return 'invitado';
+    } catch (e) {
+      return 'error';
+    }
+  }
+
   /* ── API pública ────────────────────────────────────────────── */
   return {
     migrarDesdeLocalStorage,
@@ -440,6 +659,8 @@ const FDB = (() => {
     reordenarServicios, onServiciosChange,
     // Configuración
     getConfig, updateConfig, onConfigChange,
+    // Configuración por barbero
+    getConfigBarbero, updateConfigBarbero, onConfigBarberoChange,
     // Citas
     getCitas, getCitasMes, addCita,
     updateCitaEstado, updateCitaNota, deleteCita,
@@ -449,9 +670,11 @@ const FDB = (() => {
     // Bloqueos manuales
     addBloqueo, getBloqueosDia, getBloqueosMes, deleteBloqueo, onBloqueosDiaChange,
     // Premios del club
-    getPremios, addPremio, deletePremio, onPremiosChange,
+    getPremios, addPremio, updatePremio, deletePremio, onPremiosChange,
     // Sellos
     incrementarSellos, modificarSellos, canjearSellos,
+    // Barberos (Permisos)
+    getBarberos, esBarbero, esAdminJefe, getBarberoId, getRol,
   };
 })();
 
