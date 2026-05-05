@@ -462,16 +462,23 @@ const FDB = (() => {
     let cur = ini;
 
     while (cur + parseInt(duracionServicio) <= fin) {
-      // Saltar colación
+      const slotEnd = cur + parseInt(duracionServicio);
+
+      // Saltar colación (si el servicio solapa el rango de colación)
       if (col) {
         const colS = toMins(col.inicio), colE = toMins(col.fin);
-        if (cur >= colS && cur < colE) { cur += interval; continue; }
+        if (cur < colE && slotEnd > colS) {
+          cur += interval;
+          continue;
+        }
       }
-      // Saltar bloqueo manual: omite el slot si el servicio solaparía el rango
-      const bloqueado = rangosBloq.some(r =>
-        cur < r.end && (cur + parseInt(duracionServicio)) > r.start
-      );
-      if (bloqueado) { cur += interval; continue; }
+
+      // Saltar bloqueo manual parcial (si el servicio solapa el rango de bloqueo)
+      const bloqueado = rangosBloq.some(r => cur < r.end && slotEnd > r.start);
+      if (bloqueado) {
+        cur += interval;
+        continue;
+      }
 
       const occupied = ocupados.some(o =>
         cur < o.end && (cur + parseInt(duracionServicio)) > o.start
