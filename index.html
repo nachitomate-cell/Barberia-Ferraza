@@ -17,6 +17,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -772,7 +773,8 @@
             clienteEmail:     email,
             servicioNombre:   selectedServiceObj.nombre,
             duracionServicio: selectedServiceObj.duracion,
-            barbero:          window._selectedBarber || SHOP.barberos[0]?.nombre || '',
+            barbero:          window._selectedBarber  || SHOP.barberos[0]?.nombre || '',
+            barberoId:        window._selectedBarberId || '',
           });
         } catch(e) {
           // Fallback offline: guardar en localStorage
@@ -782,6 +784,7 @@
             clienteNombre: nombre, clienteTelefono: tel, clienteEmail: email,
             servicioNombre: selectedServiceObj.nombre, duracionServicio: selectedServiceObj.duracion,
             barbero: window._selectedBarber || SHOP.barberos[0]?.nombre || '',
+            barberoId: window._selectedBarberId || '',
           });
         }
 

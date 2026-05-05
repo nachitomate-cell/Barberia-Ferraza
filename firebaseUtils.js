@@ -302,6 +302,7 @@ const FDB = (() => {
       servicioNombre:   cita.servicioNombre   || '',
       duracionServicio: Number(cita.duracionServicio) || 30,
       barbero:          cita.barbero          || '',
+      barberoId:        cita.barberoId        || '',
       estado:           'Confirmado',
       nota:             '',
       creadoEn:         firebase.firestore.FieldValue.serverTimestamp(),

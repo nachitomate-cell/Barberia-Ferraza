@@ -21,6 +21,7 @@
 
 
   <link rel="manifest" href="/manifest-admin.json">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -468,6 +469,7 @@
       display: none !important;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 </head>
 
 <body class="font-sans antialiased min-h-[100dvh] bg-admin-bg text-gray-100 pb-24 md:pb-0 relative">
@@ -648,6 +650,13 @@
             <i id="notifIcon" class="ph ph-bell text-lg"></i>
             <span id="notifLabel">Activar notificaciones</span>
             <span id="notifBadge" class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+          </button>
+
+          <!-- Botón QR de registro -->
+          <button onclick="abrirModalQR()"
+            class="flex items-center gap-3 px-4 py-3 min-h-[44px] w-full font-medium text-sm transition-colors rounded-xl text-emerald-400 hover:bg-emerald-500/10">
+            <i class="ph ph-qr-code text-lg"></i>
+            <span>QR Registro</span>
           </button>
         </nav>
 
@@ -1522,6 +1531,25 @@
             <i class="ph-bold ph-prohibit text-base"></i> Crear Bloqueo
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+     MODAL: QR REGISTRO
+══════════════════════════════════════════════════════ -->
+    <div id="qrModal" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6" onclick="if(event.target===this)cerrarModalQR()">
+      <div class="bg-admin-card border border-admin-border rounded-2xl shadow-2xl p-6 w-full max-w-xs flex flex-col items-center gap-4">
+        <div class="flex items-center justify-between w-full">
+          <h2 class="font-bold text-base flex items-center gap-2">
+            <i class="ph ph-qr-code text-emerald-400 text-lg"></i> QR de Registro
+          </h2>
+          <button onclick="cerrarModalQR()" class="text-gray-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+            <i class="ph ph-x text-lg"></i>
+          </button>
+        </div>
+        <canvas id="qrCanvas" class="rounded-xl"></canvas>
+        <p class="text-xs text-gray-500 text-center">Escanea para registrarte en el Club Ferraza</p>
+        <a id="qrLink" href="#" target="_blank" class="text-xs text-emerald-400 hover:underline truncate max-w-full"></a>
       </div>
     </div>
 
@@ -4236,7 +4264,7 @@
             const body = payload.notification?.body || payload.data?.body || 'Tienes una nueva reserva.';
             registration.showNotification(title, {
               body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
-              tag: 'nueva-cita', renotify: true, data: { url: '/gestion-interna.html' }
+              tag: 'nueva-cita', renotify: true, data: { url: '/gestion-interna/' }
             });
             if (typeof showMiniToast === 'function') showMiniToast(`🔔 ${title}: ${body}`);
           });
@@ -4551,6 +4579,22 @@
     document.getElementById('barberEditModal').addEventListener('click', function(e) {
       if (e.target === this) closeBarberModal();
     });
+  </script>
+
+  <script>
+    function abrirModalQR() {
+      const modal = document.getElementById('qrModal');
+      const canvas = document.getElementById('qrCanvas');
+      const link = document.getElementById('qrLink');
+      const url = window.location.origin + '/registro.html';
+      link.href = url;
+      link.textContent = url;
+      QRCode.toCanvas(canvas, url, { width: 220, margin: 2, color: { dark: '#ffffff', light: '#111827' } });
+      modal.classList.remove('hidden');
+    }
+    function cerrarModalQR() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
   </script>
 
 </body>
