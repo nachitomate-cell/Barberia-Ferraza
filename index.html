@@ -581,7 +581,7 @@
       const settings = customConfig || _fsConfig || DB.getSettings();
       let hours = [];
       try {
-        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, settings);
+        hours = await FDB.getHorasDisponibles(currentDateStr, selectedServiceObj.duracion, settings, window._selectedBarberId || null);
       } catch(e) {
         // Fallback a localStorage si no hay conexión
         hours = DB.getAvailableHours(currentDateStr, selectedServiceObj.duracion);
@@ -809,7 +809,7 @@
 
 
         const waMsg = `Hola ${SHOP.nombreCorto}! Acabo de agendar en su web. Soy ${nombre} y voy para un ${selectedServiceObj.nombre} a las ${selectedTimeStr} hrs el ${currentDateStr}. \n¿Todo ok? 💈`;
-        const numBarbero = (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;
+        const numBarbero = (_activeBarberConfig || {}).telefonoAdmin || (_fsConfig || {}).telefonoAdmin || DB.getSettings().telefonoAdmin || SHOP.telefono;
         const limpio = String(numBarbero).replace(/\D/g, ''); // Quita símbolos, espacios, y el "+"
         const waLink = `https://wa.me/${limpio}?text=${encodeURIComponent(waMsg)}`;
         

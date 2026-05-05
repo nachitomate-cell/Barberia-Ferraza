@@ -418,7 +418,7 @@ const FDB = (() => {
      ────────────────────────────────────────────────────────────── */
   // Legacy: el flujo publico multi-tenant usa BookingService.getAvailableSlots().
   // Se mantiene temporalmente para compatibilidad con paneles existentes.
-  async function getHorasDisponibles(fecha, duracionServicio, configOverride = null) {
+  async function getHorasDisponibles(fecha, duracionServicio, configOverride = null, barberoId = null) {
     const cfg = configOverride || await getConfig();
 
     // Cargar citas y bloqueos en paralelo
@@ -440,7 +440,12 @@ const FDB = (() => {
     const fin = toMins(dc.fin    || cfg.horarioFin    || '20:00');
     const interval = cfg.intervaloMinutos || 30;
 
-    const ocupados = citas
+    // Filtrar citas por barbero si se especificó uno
+    const citasFiltradas = barberoId
+      ? citas.filter(c => c.barberoId === barberoId)
+      : citas;
+
+    const ocupados = citasFiltradas
       .filter(c => c.estado !== 'Cancelada')
       .map(c => ({
         start: toMins(c.hora),
