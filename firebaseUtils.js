@@ -290,6 +290,11 @@ const FDB = (() => {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
 
+  // ID determinístico para el documento de bloqueo de slot en la colección 'slots'
+  function _slotId(fecha, barberoId, hora) {
+    return `${fecha}_${barberoId || '_any_'}_${hora.replace(':', '')}`;
+  }
+
   // Legacy: el flujo publico multi-tenant usa BookingService.createBooking().
   // Se mantiene temporalmente para compatibilidad con vistas antiguas.
   async function addCita(cita) {
@@ -299,6 +304,7 @@ const FDB = (() => {
       clienteNombre:    cita.clienteNombre    || '',
       clienteTelefono:  cita.clienteTelefono  || '',
       clienteEmail:     cita.clienteEmail     || '',
+      clienteUid:       cita.clienteUid       || '',
       servicioNombre:   cita.servicioNombre   || '',
       duracionServicio: Number(cita.duracionServicio) || 30,
       barbero:          cita.barbero          || '',
@@ -310,8 +316,58 @@ const FDB = (() => {
     return ref.id;
   }
 
+  // Reserva atómica: verifica que el slot siga libre y crea la cita en una sola transacción.
+  // Lanza Error si el slot fue tomado justo antes de confirmar.
+  async function addCitaAtomica(cita) {
+    const slotRef = db.collection('slots').doc(
+      _slotId(cita.fecha, cita.barberoId, cita.hora)
+    );
+    const citaRef = db.collection(COL.CITAS).doc();
+
+    await db.runTransaction(async (tx) => {
+      const slotSnap = await tx.get(slotRef);
+      if (slotSnap.exists) {
+        throw new Error('Este horario ya fue tomado. Por favor selecciona otra hora.');
+      }
+      tx.set(slotRef, {
+        fecha:     cita.fecha,
+        hora:      cita.hora,
+        barberoId: cita.barberoId || '',
+        citaId:    citaRef.id,
+        creadoEn:  firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      tx.set(citaRef, {
+        fecha:            cita.fecha            || '',
+        hora:             cita.hora             || '',
+        clienteNombre:    cita.clienteNombre    || '',
+        clienteTelefono:  cita.clienteTelefono  || '',
+        clienteEmail:     cita.clienteEmail     || '',
+        clienteUid:       cita.clienteUid       || '',
+        servicioNombre:   cita.servicioNombre   || '',
+        duracionServicio: Number(cita.duracionServicio) || 30,
+        barbero:          cita.barbero          || '',
+        barberoId:        cita.barberoId        || '',
+        estado:           'Confirmado',
+        nota:             '',
+        creadoEn:         firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    return citaRef.id;
+  }
+
   async function updateCitaEstado(id, estado) {
     await db.collection(COL.CITAS).doc(id).update({ estado });
+    // Liberar el slot al cancelar para que el horario quede disponible nuevamente
+    if (estado === 'Cancelada') {
+      try {
+        const snap = await db.collection(COL.CITAS).doc(id).get();
+        if (snap.exists) {
+          const d = snap.data();
+          await db.collection('slots').doc(_slotId(d.fecha, d.barberoId, d.hora)).delete();
+        }
+      } catch (_) { /* best effort */ }
+    }
   }
 
   async function updateCitaNota(id, nota) {
@@ -319,6 +375,13 @@ const FDB = (() => {
   }
 
   async function deleteCita(id) {
+    try {
+      const snap = await db.collection(COL.CITAS).doc(id).get();
+      if (snap.exists) {
+        const d = snap.data();
+        await db.collection('slots').doc(_slotId(d.fecha, d.barberoId, d.hora)).delete();
+      }
+    } catch (_) { /* best effort */ }
     await db.collection(COL.CITAS).doc(id).delete();
   }
 
@@ -421,11 +484,20 @@ const FDB = (() => {
   async function getHorasDisponibles(fecha, duracionServicio, configOverride = null, barberoId = null) {
     const cfg = configOverride || await getConfig();
 
-    // Cargar citas y bloqueos en paralelo
-    const [citas, bloqueos] = await Promise.all([
+    // Cargar citas, bloqueos y slots en paralelo — lecturas directas de Firestore sin caché local
+    const [citas, bloqueos, slotsSnap] = await Promise.all([
       getCitas(fecha),
       getBloqueosDia(fecha),
+      db.collection('slots').where('fecha', '==', fecha).get(),
     ]);
+
+    // Horas bloqueadas por slots (segunda fuente de verdad, complementa a citas)
+    const horasConSlot = new Set(
+      slotsSnap.docs
+        .map(d => d.data())
+        .filter(s => !barberoId || s.barberoId === barberoId || !s.barberoId)
+        .map(s => s.hora)
+    );
 
     // Día completamente bloqueado → sin slots
     if (bloqueos.some(b => b.todo_el_dia)) return [];
@@ -440,9 +512,10 @@ const FDB = (() => {
     const fin = toMins(dc.fin    || cfg.horarioFin    || '20:00');
     const interval = cfg.intervaloMinutos || 30;
 
-    // Filtrar citas por barbero si se especificó uno
+    // Filtrar citas por barbero. También se incluyen citas sin barberoId (citas antiguas
+    // sin el campo) para no dejar slots vacíos por error de migración.
     const citasFiltradas = barberoId
-      ? citas.filter(c => c.barberoId === barberoId)
+      ? citas.filter(c => c.barberoId === barberoId || !c.barberoId)
       : citas;
 
     const ocupados = citasFiltradas
@@ -480,10 +553,11 @@ const FDB = (() => {
         continue;
       }
 
-      const occupied = ocupados.some(o =>
+      const slotTime = fromMin(cur);
+      const occupied = horasConSlot.has(slotTime) || ocupados.some(o =>
         cur < o.end && (cur + parseInt(duracionServicio)) > o.start
       );
-      slots.push({ time: fromMin(cur), occupied });
+      slots.push({ time: slotTime, occupied });
       cur += interval;
     }
     return slots;
@@ -572,9 +646,7 @@ const FDB = (() => {
         });
         if (doc) return true;
         
-        // Debugging temporal: Si no lo encuentra, mostrar qué correos SÍ están en la colección barberos y su estado activo
-        const correos = snap.docs.map(d => `${d.data().email || 'Sin correo'} (activo: ${d.data().activo})`).join('\n');
-        alert(`Depuración: Tu correo es "${email}". \nCorreos encontrados en 'barberos': \n${correos}\n\nSi ves tu correo pero dice "activo: false", significa que el barbero está DESACTIVADO en la base de datos y por eso se rechaza el inicio de sesión.`);
+        console.warn('[FDB] esBarbero: correo no encontrado en colección barberos:', email);
       }
       return false;
     } catch (e) {
@@ -664,6 +736,40 @@ const FDB = (() => {
     }
   }
 
+  /* ──────────────────────────────────────────────────────────────
+     MIGRACIÓN: crear slot docs para citas existentes (se ejecuta 1 vez por browser)
+     Garantiza que citas creadas antes de addCitaAtomica tengan su lock en 'slots/'.
+     ────────────────────────────────────────────────────────────── */
+  async function backfillSlots() {
+    const FLAG = 'slots_backfill_v1';
+    if (localStorage.getItem(FLAG)) return 0;
+    try {
+      const hoy  = new Date().toISOString().slice(0, 10);
+      const snap = await db.collection(COL.CITAS).where('fecha', '>=', hoy).get();
+      const batch = db.batch();
+      let count = 0;
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.estado === 'Cancelada' || !d.fecha || !d.hora) return;
+        batch.set(
+          db.collection('slots').doc(_slotId(d.fecha, d.barberoId, d.hora)),
+          { fecha: d.fecha, hora: d.hora, barberoId: d.barberoId || '',
+            citaId: doc.id, migrado: true,
+            creadoEn: firebase.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+        count++;
+      });
+      if (count > 0) await batch.commit();
+      localStorage.setItem(FLAG, '1');
+      console.info(`[FDB] backfillSlots: ${count} slots sincronizados.`);
+      return count;
+    } catch (e) {
+      console.warn('[FDB] backfillSlots:', e.message);
+      return 0;
+    }
+  }
+
   /* ── API pública ────────────────────────────────────────────── */
   return {
     migrarDesdeLocalStorage,
@@ -675,7 +781,7 @@ const FDB = (() => {
     // Configuración por barbero
     getConfigBarbero, updateConfigBarbero, onConfigBarberoChange,
     // Citas
-    getCitas, getCitasMes, addCita,
+    getCitas, getCitasMes, addCita, addCitaAtomica,
     updateCitaEstado, updateCitaNota, deleteCita,
     onCitasDiaChange,
     // Disponibilidad
@@ -688,6 +794,8 @@ const FDB = (() => {
     incrementarSellos, modificarSellos, canjearSellos,
     // Barberos (Permisos)
     getBarberos, esBarbero, esAdminJefe, getBarberoId, getRol,
+    // Migración
+    backfillSlots,
   };
 })();
 

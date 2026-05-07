@@ -30,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
   <script src="/firebase-config.js"></script>
-  <script src="/firebaseUtils.js?v=2.0"></script>
+  <script src="/firebaseUtils.js?v=2.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 
@@ -1271,6 +1271,14 @@
                  </div>
               </div>
            </div>
+           <!-- ── Historial de Citas del cliente ───────────────────── -->
+           <div>
+              <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-5">Historial de Citas</p>
+              <div id="panelCitas" class="bg-white/3 border border-white/5 rounded-3xl px-6 py-2 max-h-96 overflow-y-auto custom-scrollbar">
+                 <p class="text-xs text-gray-600 text-center py-4 italic">Cargando citas...</p>
+              </div>
+           </div>
+
         </div>
       </div>
     </div>
@@ -1546,19 +1554,29 @@
     <!-- ══════════════════════════════════════════════════════
      MODAL: QR REGISTRO
 ══════════════════════════════════════════════════════ -->
-    <div id="qrModal" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6" onclick="if(event.target===this)cerrarModalQR()">
-      <div class="bg-admin-card border border-admin-border rounded-2xl shadow-2xl p-6 w-full max-w-xs flex flex-col items-center gap-4">
+    <div id="qrModal" class="hidden fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6" onclick="if(event.target===this)cerrarModalQR()">
+      <div class="bg-admin-card border border-admin-border rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col items-center gap-5">
+        <!-- Cabecera -->
         <div class="flex items-center justify-between w-full">
-          <h2 class="font-bold text-base flex items-center gap-2">
-            <i class="ph ph-qr-code text-emerald-400 text-lg"></i> QR de Registro
-          </h2>
+          <div></div>
           <button onclick="cerrarModalQR()" class="text-gray-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
-            <i class="ph ph-x text-lg"></i>
+            <i class="ph ph-x text-xl"></i>
           </button>
         </div>
-        <canvas id="qrCanvas" class="rounded-xl"></canvas>
-        <p class="text-xs text-gray-500 text-center">Escanea para registrarte en el Club Ferraza</p>
-        <a id="qrLink" href="#" target="_blank" class="text-xs text-emerald-400 hover:underline truncate max-w-full"></a>
+
+        <!-- Título principal -->
+        <div class="text-center -mt-2">
+          <i class="ph-fill ph-medal text-emerald-400 text-4xl mb-2 block"></i>
+          <h2 class="text-2xl font-bold text-white tracking-tight">Únete al Club Ferraza</h2>
+          <p class="text-sm text-gray-400 mt-1">Escanea el código y acumula sellos</p>
+        </div>
+
+        <!-- QR grande -->
+        <canvas id="qrCanvas" class="rounded-2xl ring-4 ring-emerald-400/30"></canvas>
+
+        <!-- Link y acción -->
+        <a id="qrLink" href="#" target="_blank" class="text-xs text-emerald-400 hover:underline truncate max-w-full text-center">
+        </a>
       </div>
     </div>
 
@@ -1624,7 +1642,8 @@
       let _bloqueosCache = [];   // bloqueos del día actual en tiempo real
       let _citasUnsub = null; // cleanup del onSnapshot de citas
       let _bloqueosUnsub = null; // cleanup del onSnapshot de bloqueos
-      let _panelUnsub = null; // cleanup del onSnapshot del cliente abierto
+      let _panelUnsub = null;      // cleanup del onSnapshot del cliente abierto
+      let _citasPanelLoaded = false; // evita recargar citas en cada cambio de sello
 
       // Clientes (Tab 4)
       let allClients = [];   // Cache de Firestore
@@ -1756,6 +1775,14 @@
         const sel = document.getElementById('agenda-barbero-select');
         if (!sel) return;
         const barberos = (_barberosCache || []).filter(b => b.activo !== false && b.rol !== 'admin');
+
+        // Barbero con rol restringido: solo ve su propia agenda, sin selector
+        if (window._loggedBarberoUid) {
+          sel.parentElement.style.display = 'none'; // ocultar el selector
+          if (!_agendaBarberoId) cambiarAgendaBarbero(window._loggedBarberoUid);
+          return;
+        }
+
         const current = sel.value;
         sel.innerHTML = '<option value="">Todos</option>' +
           barberos.map(b => `<option value="${b.id}"${b.id === current ? ' selected' : ''}>${b.nombre || b.id}</option>`).join('');
@@ -2006,18 +2033,29 @@
 
         if (nuevoEstado !== 'Completada') return;
 
-        // Buscar cliente en Firestore por email o nombre
-        const email = booking.clienteEmail?.trim() || '';
-        const nombre = booking.clienteNombre?.trim() || '';
+        const email      = booking.clienteEmail?.trim()  || '';
+        const nombre     = booking.clienteNombre?.trim() || '';
+        const clienteUid = booking.clienteUid?.trim()    || '';
 
         try {
+          // 1. Lookup directo por UID (citas nuevas siempre lo tienen)
+          if (clienteUid) {
+            const userDoc = await db.collection('users').doc(clienteUid).get();
+            if (userDoc.exists) {
+              toastClientUid  = clienteUid;
+              toastClientName = userDoc.data().nombre || nombre;
+              mostrarSelloToast(toastClientName);
+              return;
+            }
+          }
+          // 2. Fallback: buscar por email o nombre (citas antiguas sin UID)
           let snap = null;
           if (email) snap = await db.collection('users').where('email', '==', email).limit(1).get();
           if ((!snap || snap.empty) && nombre) snap = await db.collection('users').where('nombre', '==', nombre).limit(1).get();
 
           if (snap && !snap.empty) {
-            const docRef = snap.docs[0];
-            toastClientUid = docRef.id;
+            const docRef    = snap.docs[0];
+            toastClientUid  = docRef.id;
             toastClientName = docRef.data().nombre || nombre;
             mostrarSelloToast(toastClientName);
           }
@@ -2851,13 +2889,17 @@
 
       /* ── SIDE PANEL ─────────────────────────────────────────────── */
       function abrirPanel(uid, push = true) {
-        currentClientUid = uid;
+        currentClientUid  = uid;
+        _citasPanelLoaded = false;
 
         // Cancelar suscripción anterior si había otra abierta
         if (_panelUnsub) { _panelUnsub(); _panelUnsub = null; }
 
-        // onSnapshot: actualiza el panel en tiempo real cada vez que
-        // cambie el documento del usuario en Firestore
+        // Resetear sección de citas mientras carga
+        document.getElementById('panelCitas').innerHTML =
+          '<p class="text-xs text-gray-600 text-center py-4 italic">Cargando citas...</p>';
+
+        // onSnapshot: actualiza sellos y perfil en tiempo real
         _panelUnsub = db.collection('users').doc(uid).onSnapshot(snap => {
           if (!snap.exists) return;
           const data = snap.data();
@@ -2872,6 +2914,12 @@
           // Re-renderizar panel y lista
           _renderPanel(uid, data);
           renderClientList();
+
+          // Cargar citas solo la primera vez (no en cada cambio de sello)
+          if (!_citasPanelLoaded) {
+            _citasPanelLoaded = true;
+            _cargarCitasPanel(uid, data.email || '');
+          }
         });
 
         document.getElementById('tab-clientes').classList.add('hidden');
@@ -2885,8 +2933,8 @@
       }
 
       function cerrarPanel(push = true) {
-        // Detener suscripción al cerrar el panel
         if (_panelUnsub) { _panelUnsub(); _panelUnsub = null; }
+        _citasPanelLoaded = false;
 
         document.getElementById('clientModal').classList.add('hidden');
         document.getElementById('tab-clientes').classList.remove('hidden');
@@ -2895,6 +2943,63 @@
 
         if (push && window.location.pathname.includes('/gestion-interna/clientes/')) {
           window.history.pushState({ tabId: 'tab-clientes' }, '', `/gestion-interna/clientes`);
+        }
+      }
+
+      async function _cargarCitasPanel(uid, email) {
+        const el = document.getElementById('panelCitas');
+        try {
+          let citas = [];
+
+          // 1. Buscar por UID (citas nuevas)
+          const snapUid = await db.collection('citas').where('clienteUid', '==', uid).get();
+          citas = snapUid.docs.map(d => ({ id: d.id, ...d.data() }));
+
+          // 2. Fallback por email (citas antiguas sin UID)
+          if (!citas.length && email) {
+            const snapEmail = await db.collection('citas').where('clienteEmail', '==', email).get();
+            citas = snapEmail.docs.map(d => ({ id: d.id, ...d.data() }));
+          }
+
+          // Ordenar por fecha+hora descendente, máx 30
+          citas.sort((a, b) => (b.fecha + (b.hora || '')).localeCompare(a.fecha + (a.hora || '')));
+          citas = citas.slice(0, 30);
+
+          if (!citas.length) {
+            el.innerHTML = '<p class="text-xs text-gray-600 text-center py-4 italic">Sin citas registradas.</p>';
+            return;
+          }
+
+          const estadoCfg = {
+            'Completada': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+            'Cancelada':  'bg-red-500/10 text-red-400 border-red-500/20',
+            'Confirmado': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            'Pendiente':  'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+            'No Asistió': 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+          };
+
+          el.innerHTML = citas.map(c => {
+            const badge = estadoCfg[c.estado] || estadoCfg['Confirmado'];
+            const mesCorto = c.fecha
+              ? new Date(c.fecha + 'T12:00').toLocaleDateString('es-CL', { month: 'short' })
+              : '—';
+            const dia = c.fecha ? c.fecha.split('-')[2] : '—';
+            return `
+              <div class="flex items-center gap-4 py-3.5 border-b border-white/5 last:border-0">
+                <div class="w-11 h-11 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0">
+                  <span class="text-[9px] font-bold text-gray-500 uppercase">${mesCorto}</span>
+                  <span class="text-sm font-black text-white leading-tight">${dia}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-bold text-white truncate">${c.servicioNombre || '—'}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">${c.hora || ''} · ${c.barbero || '—'}</p>
+                </div>
+                <span class="shrink-0 text-[10px] font-bold px-2.5 py-1.5 rounded-xl border ${badge}">${c.estado || 'Confirmado'}</span>
+              </div>`;
+          }).join('');
+        } catch (e) {
+          console.error('[Panel] _cargarCitasPanel:', e);
+          el.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">Error al cargar citas.</p>';
         }
       }
 
@@ -3242,22 +3347,27 @@
           const isBarbero = await FDB.esBarbero(user.email, user.uid);
           if (isBarbero) {
             const role = await FDB.getRol(user.email, user.uid);
-            const isAuthorized = role === 'admin' || role === 'jefe';
 
-            if (!isAuthorized) {
-              // El barbero no tiene permiso para el panel administrativo global
-              window.location.href = '/gestion-interna/login/';
-              return;
-            } else {
-              // Gestionar visibilidad por rol
-              // El rol 'admin' (desarrollador) no ve la configuración ya que no tiene agenda propia
+            if (role === 'barbero') {
+              // Barbero: acceso restringido — solo ve su propia agenda
+              document.body.classList.add('is-barbero-only');
+              // Forzar tab inicial a la agenda
+              window.INITIAL_TAB = 'tab-citas';
+              // Guardar UID para auto-filtrar su agenda al cargar
+              window._loggedBarberoUid = user.uid;
+            } else if (role === 'admin' || role === 'jefe') {
+              // Admin y jefe: acceso completo
               if (role === 'jefe') {
                 document.querySelectorAll('.jefe-only').forEach(el => el.classList.remove('hidden-for-role'));
               } else {
                 document.querySelectorAll('.jefe-only').forEach(el => el.classList.add('hidden-for-role'));
               }
+            } else {
+              // Rol desconocido o invitado: denegar acceso
+              window.location.href = '/gestion-interna/login/';
+              return;
             }
-            
+
             // Autenticado y autorizado: mostrar app
             document.getElementById('adminApp').classList.remove('hidden');
 
@@ -3292,6 +3402,9 @@
       // (el DOM ya cargó, así que no necesita DOMContentLoaded)
       // ══════════════════════════════════════════════════════════════
       async function _initAdmin() {
+        // Sincronizar slots/ para citas que existían antes de addCitaAtomica (1 vez por browser)
+        FDB.backfillSlots().catch(e => console.warn('[Admin] backfillSlots:', e.message));
+
         // ── Branding ────────────────────────────────────────────────
         document.title = `Panel Admin | ${SHOP.nombre}`;
         document.getElementById('shopLogoMobile').src = SHOP.logo;
@@ -4636,7 +4749,7 @@
       const url = window.location.origin + '/registro.html';
       link.href = url;
       link.textContent = url;
-      QRCode.toCanvas(canvas, url, { width: 220, margin: 2, color: { dark: '#ffffff', light: '#111827' } });
+      QRCode.toCanvas(canvas, url, { width: 280, margin: 2, color: { dark: '#ffffff', light: '#111827' } });
       modal.classList.remove('hidden');
     }
     function cerrarModalQR() {

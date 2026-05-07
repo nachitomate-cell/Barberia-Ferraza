@@ -20,16 +20,18 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE ─────────────────────────────────────────────────────
-const CACHE_VERSION = 'ferraza-v10';
+const CACHE_VERSION = 'ferraza-v12';
 const STATIC_ASSETS = [
   '/admin/',
   '/gestion-interna/',
+  '/dashboard',
   '/logo.jpg',
   '/output.css',
   '/firebase-config.js',
   '/firebaseUtils.js',
   '/config.js',
   '/db.js',
+  '/manifest-dashboard.json',
   '/manifest-admin.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'

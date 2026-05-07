@@ -17,7 +17,7 @@
   <meta name="robots" content="noindex, nofollow">
 
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest-dashboard.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,7 +37,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseUtils.js"></script>
+  <script src="firebaseUtils.js?v=2.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
 
@@ -145,6 +145,23 @@
       <p class="text-[11px] text-gray-600 text-center mt-5 leading-relaxed">
         Cada visita a la barbería suma un sello.<br>Tu barbero lo registra al terminar el corte.
       </p>
+
+      <!-- Banner instalar app -->
+      <div id="pwaBanner" class="hidden mt-5 bg-white/4 border border-white/10 rounded-2xl px-5 py-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center flex-shrink-0">
+          <i class="ph-fill ph-device-mobile-speaker text-white text-xl"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-white leading-tight">Instala la app en tu celular</p>
+          <p class="text-[11px] text-gray-500 mt-0.5">Accede rápido a tus sellos y premios</p>
+        </div>
+        <button onclick="installPwa()" class="shrink-0 bg-white text-[#050505] font-bold text-xs px-4 py-2 rounded-xl active:scale-95 transition-all hover:bg-white/90">
+          Instalar
+        </button>
+        <button onclick="dismissPwaBanner()" class="shrink-0 text-gray-600 hover:text-gray-400 p-1">
+          <i class="ph-bold ph-x text-sm"></i>
+        </button>
+      </div>
     </section>
 
     <!-- ═══════ PESTAÑA 2: LOOKBOOK ═══════ -->
@@ -154,10 +171,15 @@
         <p class="text-sm text-gray-500 mt-1">Cortes y estilos de la barbería.</p>
       </div>
 
-      <!-- Masonry grid de fotos -->
-      <div class="masonry-grid" id="lookbookGrid">
-        <!-- Las imágenes se cargan dinámicamente. Aquí van los placeholders de ejemplo: -->
+      <!-- Loading state -->
+      <div id="lookbookLoading" class="hidden flex-col items-center justify-center py-20 text-center">
+        <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4 mx-auto"></div>
+        <p class="text-sm text-gray-500 font-medium">Cargando los mejores estilos...</p>
+        <p class="text-[11px] text-gray-700 mt-1">Un momento, vale la pena.</p>
       </div>
+
+      <!-- Masonry grid de fotos -->
+      <div class="masonry-grid" id="lookbookGrid"></div>
 
       <!-- Empty state si no hay fotos -->
       <div id="lookbookEmpty" class="hidden flex-col items-center justify-center text-center py-20">
@@ -182,6 +204,48 @@
             <span id="profileStamps" class="text-xs font-bold text-white/60">0 sellos</span>
           </div>
         </div>
+      </div>
+
+      <!-- Próxima Cita -->
+      <div id="nextApptSection" class="hidden mb-7">
+        <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Próxima Cita</h3>
+        <div class="relative bg-[#0c0c10] rounded-2xl border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.05)] overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/4 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Servicio</p>
+                <p id="apptServicio" class="text-sm font-bold text-white">—</p>
+                <p id="apptBarbero" class="text-[11px] text-gray-500 mt-0.5"></p>
+              </div>
+              <div class="text-right">
+                <p class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Hora</p>
+                <p id="apptFecha" class="text-xs font-semibold text-gray-400 leading-tight capitalize">—</p>
+                <p id="apptHora" class="text-2xl font-black text-neon mt-0.5 leading-none">—</p>
+              </div>
+            </div>
+            <div class="bg-white/5 border border-white/8 rounded-xl px-4 py-2.5 flex items-center gap-3">
+              <i class="ph-fill ph-timer text-white/40 text-lg flex-shrink-0"></i>
+              <div>
+                <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Tiempo restante</p>
+                <p id="apptCountdown" class="text-sm font-bold text-white font-mono tracking-wide">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recordatorio WA (aparece a 15 min) -->
+      <div id="waReminderBanner" class="hidden mb-5 bg-[#041a0e] border border-green-500/40 rounded-2xl px-5 py-4 flex items-center gap-4">
+        <i class="ph-fill ph-whatsapp-logo text-green-400 text-2xl flex-shrink-0"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-white">¡Tu cita es en 15 minutos!</p>
+          <p class="text-[11px] text-gray-400 mt-0.5 leading-tight">Prepárate para ir a la barbería.</p>
+        </div>
+        <a id="waReminderLink" href="#" target="_blank" rel="noopener"
+          class="shrink-0 bg-green-600 hover:bg-green-500 text-white font-bold text-xs px-3 py-2 rounded-xl active:scale-95 transition-all whitespace-nowrap">
+          Avisar
+        </a>
       </div>
 
       <!-- Datos de cuenta — editables -->
@@ -217,6 +281,17 @@
         class="w-full bg-white/5 border border-neon text-neon font-bold py-3.5 rounded-2xl text-sm active:scale-[0.99] transition-all hover:bg-white/10 mb-6 flex items-center justify-center gap-2">
         <i class="ph-bold ph-floppy-disk text-base"></i> Guardar cambios
       </button>
+
+      <!-- Instalar app -->
+      <div id="pwaInstallSection" class="hidden mb-6">
+        <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">App Nativa</h3>
+        <button id="pwaInstallBtn" onclick="installPwa()"
+          class="w-full flex items-center justify-center gap-3 bg-white/5 border border-neon text-neon font-bold py-4 rounded-2xl active:scale-[0.99] transition-all hover:bg-white/10 text-sm">
+          <i class="ph-bold ph-device-mobile-speaker text-lg"></i>
+          Agregar al inicio del celular
+        </button>
+        <p class="text-[11px] text-gray-600 text-center mt-2">Accede a tu tarjeta de fidelidad sin abrir el navegador.</p>
+      </div>
 
       <!-- Links legales -->
       <h3 class="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3 px-1">Legal</h3>
@@ -325,7 +400,9 @@ let activeTab       = 'loyalty';
 let _premiosDynamic = [];      // premios cargados desde Firestore
 let _userUnsub      = null;    // cleanup onSnapshot del usuario
 let _premiosUnsub   = null;    // cleanup onSnapshot de premios
-let _lookbookUnsub  = null;    // cleanup onSnapshot del lookbook
+let _lookbookLoaded = false;   // evita recargar lookbook en cada cambio de pestaña
+let _apptInterval   = null;    // intervalo del contador de la próxima cita
+let _notifScheduled = false;   // evita disparar el recordatorio más de una vez
 let _prevStamps     = null;    // para detectar incremento y lanzar confetti
 let _stampsSynced   = false;   // true después del primer snapshot (no dispara confetti en carga)
 
@@ -339,28 +416,37 @@ document.getElementById('shopNombreCard').textContent = SHOP.nombre;
 // ─── Auth Guard ───────────────────────────────────────────────
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    // Limpiar suscripciones al cerrar sesión
-    if (_userUnsub)     { _userUnsub();     _userUnsub     = null; }
-    if (_premiosUnsub)  { _premiosUnsub();  _premiosUnsub  = null; }
-    if (_lookbookUnsub) { _lookbookUnsub(); _lookbookUnsub = null; }
+    if (_userUnsub)    { _userUnsub();    _userUnsub    = null; }
+    if (_premiosUnsub) { _premiosUnsub(); _premiosUnsub = null; }
+    if (_apptInterval) { clearInterval(_apptInterval); _apptInterval = null; }
     window.location.href = 'registro.html';
     return;
   }
   currentUser = user;
   document.getElementById('authGuard').style.display = 'none';
 
-  // Cargar datos en tiempo real con onSnapshot
   subscribeUserData(user);
 
-  // Suscribir premios en tiempo real
   _premiosUnsub = FDB.onPremiosChange(premios => {
     _premiosDynamic = premios;
     renderPremiosDashboard(premios);
-    renderStamps(userStamps); // actualizar mensajes de progreso
+    renderStamps(userStamps);
   });
 
-  initLookbook();
+  loadNextAppointment(user);
 });
+
+// ─── Avatar helper (evita XSS al no interpolar URLs en innerHTML) ────
+function _setAvatar(containerId, url) {
+  const container = document.getElementById(containerId);
+  if (!container || !url) return;
+  const img = document.createElement('img');
+  img.className = 'w-full h-full object-cover';
+  img.alt = 'Avatar';
+  img.src = url;
+  container.innerHTML = '';
+  container.appendChild(img);
+}
 
 // ─── Crear documento si no existe ────────────────────────────
 async function ensureUserDoc(user, extra = {}) {
@@ -416,8 +502,7 @@ async function subscribeUserData(user) {
 
     // Avatar en header
     if (user.photoURL) {
-      document.getElementById('avatarContainer').innerHTML =
-        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+      _setAvatar('avatarContainer', user.photoURL);
     }
 
     // Perfil
@@ -433,8 +518,7 @@ async function subscribeUserData(user) {
     document.getElementById('editEmail').value = email;
 
     if (user.photoURL) {
-      document.getElementById('profileAvatar').innerHTML =
-        `<img src="${user.photoURL}" class="w-full h-full object-cover" alt="Avatar">`;
+      _setAvatar('profileAvatar', user.photoURL);
     }
 
     renderStamps(stamps);
@@ -478,16 +562,24 @@ function renderPremiosDashboard(premios) {
     return;
   }
 
-  el.innerHTML = premios.map((p, i) => `
-    <div class="flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4">
-      <span class="text-xl font-black text-neon leading-none">${p.costoSellos}</span>
+  const fragment = document.createDocumentFragment();
+  premios.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-4 bg-brand-card rounded-2xl border border-white/8 px-5 py-4';
+    row.innerHTML = `
+      <span class="text-xl font-black text-neon leading-none"></span>
       <div class="w-px h-6 bg-white/10"></div>
       <div>
         <p class="text-xs font-bold text-white/40 uppercase tracking-widest">Sellos</p>
-        <p class="text-sm font-bold text-brand-text">${p.nombre}</p>
+        <p class="text-sm font-bold text-brand-text"></p>
       </div>
-      <i class="ph-fill ${_DASH_PREMIO_ICONS[i % _DASH_PREMIO_ICONS.length]} text-white/20 ml-auto text-lg"></i>
-    </div>`).join('');
+      <i class="ph-fill ${_DASH_PREMIO_ICONS[i % _DASH_PREMIO_ICONS.length]} text-white/20 ml-auto text-lg"></i>`;
+    row.querySelector('span').textContent = p.costoSellos;
+    row.querySelectorAll('p')[1].textContent = p.nombre;
+    fragment.appendChild(row);
+  });
+  el.innerHTML = '';
+  el.appendChild(fragment);
 }
 
 // ─── Renderizar tarjeta de sellos ─────────────────────────────
@@ -547,38 +639,41 @@ function renderStamps(count) {
 
 // ─── Lookbook ─────────────────────────────────────────────────
 function initLookbook() {
-  const grid  = document.getElementById('lookbookGrid');
-  const empty = document.getElementById('lookbookEmpty');
+  if (_lookbookLoaded) return;
+
+  const grid    = document.getElementById('lookbookGrid');
+  const empty   = document.getElementById('lookbookEmpty');
+  const loading = document.getElementById('lookbookLoading');
   if (!grid) return;
 
-  // Skeletons mientras carga Firestore
-  grid.innerHTML = `
-    <div class="masonry-item rounded-2xl aspect-[3/4] bg-white/5 animate-pulse"></div>
-    <div class="masonry-item rounded-2xl aspect-[4/5] bg-white/5 animate-pulse"></div>
-    <div class="masonry-item rounded-2xl aspect-square bg-white/5 animate-pulse"></div>
-    <div class="masonry-item rounded-2xl aspect-[3/4] bg-white/5 animate-pulse"></div>`;
+  grid.innerHTML = '';
+  if (loading) loading.classList.remove('hidden');
 
-  if (_lookbookUnsub) { _lookbookUnsub(); _lookbookUnsub = null; }
-
-  _lookbookUnsub = db.collection('lookbook').orderBy('order', 'asc').onSnapshot(snap => {
-    if (snap.empty) {
-      grid.innerHTML = '';
-      empty.classList.remove('hidden');
-      empty.classList.add('flex');
-      return;
-    }
-    empty.classList.add('hidden');
-    empty.classList.remove('flex');
-    grid.innerHTML = snap.docs.map(doc => {
-      const { url } = doc.data();
-      return `
-        <div class="masonry-item rounded-2xl overflow-hidden border border-white/8 bg-brand-card">
-          <img src="${url}" loading="lazy"
-               class="w-full object-cover block"
-               onerror="this.parentElement.remove()">
-        </div>`;
-    }).join('');
-  }, err => console.error('[Lookbook] onSnapshot:', err));
+  db.collection('lookbook').orderBy('order', 'asc').get()
+    .then(snap => {
+      if (loading) loading.classList.add('hidden');
+      if (snap.empty) {
+        empty.classList.remove('hidden');
+        empty.classList.add('flex');
+        return;
+      }
+      empty.classList.add('hidden');
+      empty.classList.remove('flex');
+      grid.innerHTML = snap.docs.map(doc => {
+        const { url } = doc.data();
+        return `
+          <div class="masonry-item rounded-2xl overflow-hidden border border-white/8 bg-brand-card">
+            <img src="${url}" loading="lazy"
+                 class="w-full object-cover block"
+                 onerror="this.parentElement.remove()">
+          </div>`;
+      }).join('');
+      _lookbookLoaded = true;
+    })
+    .catch(err => {
+      if (loading) loading.classList.add('hidden');
+      console.error('[Lookbook]', err);
+    });
 }
 
 // ─── Tab Navigation ───────────────────────────────────────────
@@ -601,9 +696,10 @@ function switchTab(tab) {
   void activePanel.offsetWidth;
   activePanel.classList.add('animate-[fadeSlideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]');
   document.getElementById(navBtns[tab]).classList.add('active');
+
+  if (tab === 'lookbook') initLookbook();
 }
 
-// ─── Sign Out ─────────────────────────────────────────────────
 // ─── Guardar perfil ───────────────────────────────────────────
 // ── Prefijo +56 automático para teléfono ─────────────────────
 (function initPhonePrefix() {
@@ -638,21 +734,16 @@ async function guardarPerfil() {
     return alert('Ingresa un teléfono válido. Debe comenzar con +56 9 seguido de 8 dígitos.');
 
   try {
-    // Actualizar Firestore
     await db.collection('users').doc(currentUser.uid).update({ nombre, email, telefono });
-
-    // Actualizar Firebase Auth (displayName y email)
     await currentUser.updateProfile({ displayName: nombre });
     if (email && email !== currentUser.email) {
       await currentUser.updateEmail(email);
     }
 
-    // Actualizar UI de encabezado
     document.getElementById('profileName').textContent  = nombre;
     document.getElementById('profileEmail').textContent = email;
     document.getElementById('headerGreeting').textContent = `Hola, ${nombre.split(' ')[0]}`;
 
-    // Mensaje de éxito
     const msg = document.getElementById('profileSaveMsg');
     msg.classList.remove('hidden');
     setTimeout(() => msg.classList.add('hidden'), 3000);
@@ -680,13 +771,10 @@ function closeDeleteModal() {
 async function deleteAccount() {
   if (!currentUser) return;
   try {
-    // Borrar documento de Firestore
     await db.collection('users').doc(currentUser.uid).delete();
-    // Borrar cuenta de Auth
     await currentUser.delete();
     window.location.href = 'index.html';
   } catch (err) {
-    // Firebase requiere re-autenticación reciente para deleteUser
     if (err.code === 'auth/requires-recent-login') {
       closeDeleteModal();
       alert('Por seguridad, cierra sesión e ingresa de nuevo antes de eliminar tu cuenta.');
@@ -696,9 +784,155 @@ async function deleteAccount() {
     }
   }
 }
+
+// ─── Próxima Cita ──────────────────────────────────────────────
+async function loadNextAppointment(user) {
+  if (!user) return;
+  let citas = [];
+  try {
+    const snapUid = await db.collection('citas').where('clienteUid', '==', user.uid).get();
+    snapUid.docs.forEach(d => citas.push({ id: d.id, ...d.data() }));
+
+    if (user.email) {
+      const snapEmail = await db.collection('citas').where('clienteEmail', '==', user.email).get();
+      const seenIds = new Set(citas.map(c => c.id));
+      snapEmail.docs.forEach(d => { if (!seenIds.has(d.id)) citas.push({ id: d.id, ...d.data() }); });
+    }
+  } catch (e) { console.error('[Appt]', e); return; }
+
+  const now = new Date();
+  const future = citas
+    .filter(c => {
+      if (!c.fecha || c.estado === 'Cancelada') return false;
+      const [y, m, d] = c.fecha.split('-').map(Number);
+      const hStr = String(c.hora || '').replace(':', '');
+      return new Date(y, m - 1, d, parseInt(hStr.slice(0,2))||0, parseInt(hStr.slice(2,4))||0) > now;
+    })
+    .sort((a, b) => {
+      const key = c => c.fecha + String(c.hora || '').replace(':', '').padStart(4, '0');
+      return key(a).localeCompare(key(b));
+    });
+
+  if (!future.length) return;
+  _showApptCard(future[0]);
+}
+
+function _fmtHora(h) {
+  const s = String(h || '').replace(':', '').padStart(4, '0');
+  return s.length >= 4 ? `${s.slice(0,2)}:${s.slice(2,4)}` : '';
+}
+
+function _showApptCard(appt) {
+  const section = document.getElementById('nextApptSection');
+  if (!section) return;
+  section.classList.remove('hidden');
+
+  document.getElementById('apptServicio').textContent = appt.servicioNombre || appt.servicio || 'Servicio';
+  document.getElementById('apptBarbero').textContent  = appt.barbero ? `con ${appt.barbero}` : '';
+
+  const [y, m, d] = (appt.fecha || '').split('-').map(Number);
+  document.getElementById('apptFecha').textContent =
+    new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const horaStr = _fmtHora(appt.hora);
+  document.getElementById('apptHora').textContent = horaStr;
+
+  const hh = parseInt(horaStr.slice(0,2)) || 0;
+  const mm = parseInt(horaStr.slice(3,5)) || 0;
+  const apptDate = new Date(y, m - 1, d, hh, mm);
+
+  if (_apptInterval) clearInterval(_apptInterval);
+  _notifScheduled = false;
+
+  function tick() {
+    const diff = apptDate - new Date();
+    if (diff <= 0) {
+      document.getElementById('apptCountdown').textContent = '¡Es ahora! ¡Ve a la barbería!';
+      clearInterval(_apptInterval);
+      return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hrs  = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    document.getElementById('apptCountdown').textContent =
+      days > 0 ? `${days}d ${hrs}h ${mins}m` :
+      hrs  > 0 ? `${hrs}h ${mins}m ${secs}s` :
+                 `${mins}m ${secs}s`;
+
+    if (!_notifScheduled && mins <= 15 && diff > 0) {
+      _notifScheduled = true;
+      _triggerWaReminder(appt);
+    }
+  }
+  tick();
+  _apptInterval = setInterval(tick, 1000);
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  const msUntil15 = apptDate - new Date() - 15 * 60 * 1000;
+  if (msUntil15 > 0) setTimeout(() => { if (!_notifScheduled) { _notifScheduled = true; _triggerWaReminder(appt); } }, msUntil15);
+}
+
+function _triggerWaReminder(appt) {
+  const banner = document.getElementById('waReminderBanner');
+  if (banner) banner.classList.remove('hidden');
+
+  const waLink = document.getElementById('waReminderLink');
+  if (waLink) {
+    const tel = (SHOP.telefono || '').replace(/\D/g, '');
+    const msg = encodeURIComponent(`¡Hola! Les recuerdo que tengo una cita a las ${_fmtHora(appt.hora)} en ${SHOP.nombre}. ¡Ya voy!`);
+    waLink.href = tel ? `https://wa.me/${tel}?text=${msg}` : '#';
+  }
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(`¡${SHOP.nombre}!`, {
+      body: `Tu cita${appt.barbero ? ` con ${appt.barbero}` : ''} es en 15 minutos. ¡Prepárate!`,
+      icon: '/logo.jpg',
+    });
+  }
+}
 </script>
 
+  <!-- PWA install prompt -->
   <script>
+    let _pwaPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      _pwaPrompt = e;
+      // Mostrar banner y botón del perfil si no fue descartado
+      if (!sessionStorage.getItem('pwa_banner_dismissed')) {
+        document.getElementById('pwaBanner')?.classList.remove('hidden');
+      }
+      document.getElementById('pwaInstallSection')?.classList.remove('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      _pwaPrompt = null;
+      document.getElementById('pwaBanner')?.classList.add('hidden');
+      document.getElementById('pwaInstallSection')?.classList.add('hidden');
+    });
+
+    function installPwa() {
+      if (!_pwaPrompt) return;
+      _pwaPrompt.prompt();
+      _pwaPrompt.userChoice.then(result => {
+        if (result.outcome === 'accepted') {
+          document.getElementById('pwaBanner')?.classList.add('hidden');
+          document.getElementById('pwaInstallSection')?.classList.add('hidden');
+        }
+        _pwaPrompt = null;
+      });
+    }
+
+    function dismissPwaBanner() {
+      document.getElementById('pwaBanner')?.classList.add('hidden');
+      sessionStorage.setItem('pwa_banner_dismissed', '1');
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })

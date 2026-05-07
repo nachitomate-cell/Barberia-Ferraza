@@ -1,0 +1,19 @@
+{
+  "name": "Club Ferraza",
+  "short_name": "Club Ferraza",
+  "description": "Tu app de fidelidad en Barbería Ferraza. Acumula sellos y canjea premios.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
