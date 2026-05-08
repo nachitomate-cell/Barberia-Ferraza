@@ -485,10 +485,11 @@ const FDB = (() => {
     const cfg = configOverride || await getConfig();
 
     // Cargar citas, bloqueos y slots en paralelo — lecturas directas de Firestore sin caché local
+    // Los slots se leen con fallback vacío por si las reglas no permiten lectura pública
     const [citas, bloqueos, slotsSnap] = await Promise.all([
       getCitas(fecha),
       getBloqueosDia(fecha),
-      db.collection('slots').where('fecha', '==', fecha).get(),
+      db.collection('slots').where('fecha', '==', fecha).get().catch(() => ({ docs: [] })),
     ]);
 
     // Horas bloqueadas por slots (segunda fuente de verdad, complementa a citas)
