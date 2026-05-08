@@ -28,7 +28,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link href="/output.css" rel="stylesheet">
 
@@ -51,29 +51,70 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    /* Serif display font utility */
+    .font-display { font-family: 'Playfair Display', Georgia, serif; }
 
-    /* Utilidades Neón Personalizadas Blancas (Sutiles) */
+    /* Utilidades Neón Blancas (Sutiles) */
     .text-neon {
       color: #ffffff;
       text-shadow: 0 0 5px rgba(255, 255, 255, 0.4), 0 0 10px rgba(255, 255, 255, 0.2);
     }
-
     .border-neon {
       border-color: #ffffff;
       box-shadow: 0 0 6px rgba(255, 255, 255, 0.2), inset 0 0 6px rgba(255, 255, 255, 0.2);
     }
-
     .bg-neon {
       background-color: #ffffff;
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.4), 0 0 15px rgba(255, 255, 255, 0.2);
+    }
+
+    /* ── Separador ornamental clásico ── */
+    .sep-ornamental {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      user-select: none;
+    }
+    .sep-ornamental::before,
+    .sep-ornamental::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.13));
+    }
+    .sep-ornamental::after {
+      background: linear-gradient(to left, transparent, rgba(255,255,255,0.13));
+    }
+    .sep-ornamental-gem {
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.28);
+      letter-spacing: 0.25em;
+    }
+
+    /* ── Tarjeta de servicio con bg-image ── */
+    .service-card-bg {
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* ── Club Ferraza — banner premium plateado ── */
+    .club-banner-premium {
+      background: linear-gradient(145deg, #0d0d0f 0%, #111116 60%, #0a0a0d 100%);
+      box-shadow:
+        0 0 0 1px rgba(200, 200, 210, 0.22),
+        0 0 24px rgba(180, 180, 200, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    }
+    .club-banner-premium:hover {
+      box-shadow:
+        0 0 0 1px rgba(220, 220, 235, 0.35),
+        0 0 32px rgba(200, 200, 220, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4);
     }
   </style>
 </head>
@@ -90,7 +131,7 @@
       </button>
       <img id="shopLogo" src="" alt=""
         class="w-24 h-24 max-w-xs mx-auto rounded-full object-cover border-2 border-brand-neon shadow-[0_0_20px_rgba(255,255,255,0.25)] mb-3 mt-1">
-      <h1 id="shopNombre" class="text-3xl font-bold tracking-tight text-neon"></h1>
+      <h1 id="shopNombre" class="font-display text-3xl font-bold tracking-tight text-neon"></h1>
       <p
         class="text-[11px] font-semibold text-brand-neon tracking-[0.3em] uppercase mt-1 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">
         <span id="shopSlogan"></span></p>
@@ -110,7 +151,7 @@
     <main class="px-6 pb-6 relative min-h-[500px]">
 
       <section id="step1" class="animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">¿Qué servicio buscas?</h2>
+        <h2 class="font-display text-2xl font-bold mb-5 text-neon tracking-tight">¿Qué servicio buscas?</h2>
         
         <!-- Category Pills -->
         <div id="categoryPills" class="flex gap-2 overflow-x-auto pb-4 mb-4 no-scrollbar -mx-6 px-6 scroll-smooth">
@@ -118,8 +159,8 @@
 
         <!-- Skeleton visible mientras carga Firestore -->
         <div id="servicesSkeleton" class="grid grid-cols-2 gap-4">
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-lg animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-lg animate-pulse"></div>
         </div>
         <div class="flex flex-col gap-6" id="servicesGrid">
         </div>
@@ -127,30 +168,32 @@
 
       <!-- PASO 2 -->
       <section id="step2" class="hidden opacity-0 transform translate-x-12">
-        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona tu Barbero</h2>
+        <h2 class="font-display text-2xl font-bold mb-5 text-neon tracking-tight">Selecciona tu Barbero</h2>
         <!-- Skeleton visible mientras carga Firestore -->
         <div id="barberosSkeleton" class="flex flex-col gap-4">
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
-          <div class="h-36 bg-white/5 rounded-2xl animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-lg animate-pulse"></div>
+          <div class="h-36 bg-white/5 rounded-lg animate-pulse"></div>
         </div>
         <div id="barberosGrid" class="flex flex-col gap-4"></div>
       </section>
 
       <!-- PASO 3 -->
       <section id="step3" class="hidden opacity-0 transform translate-x-12">
-        <h2 class="text-2xl font-bold mb-6 text-neon tracking-tight">Selecciona fecha y hora</h2>
+        <h2 class="font-display text-2xl font-bold mb-5 text-neon tracking-tight">Selecciona fecha y hora</h2>
 
-        <div class="mb-8">
+        <div class="mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-brand-text text-lg" id="currentMonthText"></h3>
+            <h3 class="font-display font-semibold text-gray-200 text-lg" id="currentMonthText"></h3>
           </div>
           <div class="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 scroll-smooth" id="calendarCarousel">
             <!-- Días Dinámicos -->
           </div>
         </div>
 
+        <div class="sep-ornamental my-6"><span class="sep-ornamental-gem">✦ ✦ ✦</span></div>
+
         <div>
-          <h3 class="font-semibold text-brand-text text-lg mb-4">Horas Disponibles</h3>
+          <h3 class="font-display font-semibold text-gray-200 text-lg mb-4">Horas Disponibles</h3>
           <div class="flex flex-wrap gap-2.5" id="hoursGrid">
           </div>
         </div>
@@ -158,11 +201,11 @@
 
       <!-- PASO 4 -->
       <section id="step4" class="hidden opacity-0 transform translate-x-12">
-        <h2 class="text-2xl font-bold text-neon tracking-tight mb-2">Último paso</h2>
+        <h2 class="font-display text-2xl font-bold text-neon tracking-tight mb-2">Último paso</h2>
         <p class="text-[14px] text-gray-400 mb-6 leading-relaxed">Ingresa tus datos para confirmar la reserva a tu nombre.</p>
 
         <!-- Miembro del Club: datos pre-cargados desde Firebase Auth -->
-        <div id="clubMemberBanner" class="hidden mb-6 items-center gap-3 bg-[#0a0a0d] border border-neon/40 rounded-2xl px-4 py-3 shadow-[0_0_12px_rgba(255,255,255,0.06)]">
+        <div id="clubMemberBanner" class="hidden mb-6 items-center gap-3 bg-[#0a0a0d] border border-neon/40 rounded-lg px-4 py-3 shadow-[0_0_12px_rgba(255,255,255,0.06)]">
           <i class="ph-fill ph-medal text-xl text-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.4)] flex-shrink-0"></i>
           <div class="flex-1 min-w-0">
             <p id="clubMemberName" class="text-sm font-bold text-neon truncate"></p>
@@ -177,28 +220,30 @@
               class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Nombre
               completo</label>
             <input type="text" id="clientName" placeholder="Ej. Ignacio Mateluna"
-              class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
+              class="w-full bg-brand-card border border-brand-accent/20 rounded-lg px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
           </div>
           <div>
             <label
               class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Teléfono
               móvil</label>
             <input type="tel" id="clientPhone" value="+569 " inputmode="numeric"
-              class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
+              class="w-full bg-brand-card border border-brand-accent/20 rounded-lg px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
           </div>
           <div>
             <label
               class="block text-sm font-bold text-brand-neon mb-2 drop-shadow-[0_0_3px_rgba(255,255,255,0.25)]">Correo
               electrónico <span class="text-sm font-normal text-gray-500">(opcional)</span></label>
             <input type="email" id="clientEmail" placeholder="ejemplo@correo.com" inputmode="email"
-              class="w-full bg-brand-card border border-brand-accent/20 rounded-2xl px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
+              class="w-full bg-brand-card border border-brand-accent/20 rounded-lg px-5 py-4 text-brand-text font-medium focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon focus:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all shadow-sm placeholder-gray-600">
           </div>
         </div>
 
+        <div class="sep-ornamental my-7"><span class="sep-ornamental-gem">✦ ✦ ✦</span></div>
+
         <div
-          class="mt-8 bg-brand-card border border-neon rounded-2xl p-5 shadow-[0_0_15px_rgba(255,255,255,0.08)] relative overflow-hidden">
+          class="bg-brand-card border border-neon rounded-lg p-5 shadow-[0_0_15px_rgba(255,255,255,0.08)] relative overflow-hidden">
           <div class="absolute inset-0 bg-brand-neon/5 pointer-events-none"></div>
-          <h4 class="text-[10px] font-bold text-neon uppercase tracking-widest mb-3 relative">Resumen de Cita</h4>
+          <h4 class="font-display text-[10px] font-bold text-neon uppercase tracking-widest mb-3 relative">Resumen de Cita</h4>
           <div class="flex justify-between items-center mb-1 relative">
             <span class="font-bold text-brand-text" id="summaryService"></span>
             <span class="font-bold text-neon" id="summaryPrice"></span>
@@ -221,7 +266,7 @@
           <div class="absolute inset-0 rounded-full bg-brand-neon/10 animate-ping opacity-75"></div>
           <i class="ph-fill ph-check-circle text-6xl text-neon relative z-10"></i>
         </div>
-        <h2 class="text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
+        <h2 class="font-display text-3xl font-bold text-neon tracking-tight mb-3">¡Reserva Confirmada!</h2>
         
         <!-- Contenedor Resumen Dinámico -->
         <div class="bg-[#0a0a0d] border border-neon/30 rounded-xl p-4 mb-6 shadow-sm w-full max-w-sm mx-auto">
@@ -232,12 +277,12 @@
         <p class="text-brand-neon/80 font-medium mb-8 text-[15px] leading-relaxed">Tu espacio está 100% asegurado en nuestra agenda. Por favor, haz clic abajo para enviar un WhatsApp rápido al local y activar tus recordatorios.</p>
         
         <a id="waBtnLink" href="#" target="_blank"
-          class="w-full bg-[#25D366]/10 border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-5 hover:bg-[#25D366]/20">
+          class="w-full bg-[#25D366]/10 border-2 border-[#25D366] text-[#25D366] text-lg font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(37,211,102,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-5 hover:bg-[#25D366]/20">
           Enviar WhatsApp <i class="ph-bold ph-whatsapp-logo text-2xl drop-shadow-[0_0_5px_rgba(37,211,102,0.8)]"></i>
         </a>
 
         <!-- Invitación al Club -->
-        <div id="clubInviteBanner" class="w-full bg-[#0a0a0d] border border-neon/30 rounded-2xl p-5 mb-6 text-left relative overflow-hidden">
+        <div id="clubInviteBanner" class="w-full bg-[#0a0a0d] border border-neon/30 rounded-lg p-5 mb-6 text-left relative overflow-hidden">
           <div class="absolute inset-0 bg-white/[0.02] pointer-events-none"></div>
           <div class="flex items-start gap-3 relative">
             <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-[0_0_10px_rgba(255,255,255,0.07)]">
@@ -248,7 +293,7 @@
               <p class="text-sm font-bold text-neon mb-1">¿Aún no eres miembro del Club?</p>
               <p class="text-xs text-gray-500 leading-relaxed mb-4">Cada visita suma un sello. Llega a 10 y gana un <span class="text-white font-semibold">corte gratis</span>. Regístrate gratis en segundos.</p>
               <a href="/registro.html"
-                class="inline-flex items-center gap-2 bg-white text-[#050505] text-sm font-bold px-5 py-2.5 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.2)] active:scale-95 transition-transform hover:shadow-[0_0_25px_rgba(255,255,255,0.35)]">
+                class="inline-flex items-center gap-2 bg-white text-[#050505] text-sm font-bold px-5 py-2.5 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.2)] active:scale-95 transition-transform hover:shadow-[0_0_25px_rgba(255,255,255,0.35)]">
                 <i class="ph-fill ph-medal text-base"></i> Unirme al Club
               </a>
             </div>
@@ -268,19 +313,20 @@
 
       <!-- CLUB BANNER -->
       <div id="clubBanner"
-        class="mt-10 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+        class="mt-8 animate-[fadeSlideUp_0.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+        <div class="sep-ornamental mb-7"><span class="sep-ornamental-gem">✦ ✦ ✦</span></div>
         <a href="registro.html"
-          class="group flex items-center gap-4 bg-[#0a0a0d] border border-neon rounded-2xl px-5 py-4 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:shadow-[0_0_30px_rgba(255,255,255,0.18)] transition-all active:scale-[0.98] overflow-hidden relative">
-          <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors pointer-events-none"></div>
-          <div class="w-11 h-11 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.1)]">
+          class="group flex items-center gap-4 club-banner-premium rounded-lg px-5 py-4 transition-all active:scale-[0.98] overflow-hidden relative">
+          <div class="absolute inset-0 bg-white/0 group-hover:bg-white/[0.02] transition-colors pointer-events-none"></div>
+          <div class="w-11 h-11 rounded-md bg-white/5 border border-white/12 flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.07)]">
             <i class="ph-fill ph-medal text-xl text-neon drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <p id="shopClubNombre" class="text-[10px] font-bold text-white/40 uppercase tracking-widest"></p>
-            <p class="text-sm font-bold text-neon truncate">Únete y gana cortes gratis</p>
+            <p id="shopClubNombre" class="text-[9px] font-bold text-white/35 uppercase tracking-[0.2em]"></p>
+            <p class="font-display text-sm font-bold text-gray-200 truncate mt-0.5">Únete y gana cortes gratis</p>
             <p class="text-xs text-gray-500 mt-0.5">Acumula sellos en cada visita</p>
           </div>
-          <i class="ph-bold ph-arrow-right text-white/30 text-lg group-hover:text-white/60 transition-colors flex-shrink-0"></i>
+          <i class="ph-bold ph-arrow-right text-white/25 text-base group-hover:text-white/50 transition-colors flex-shrink-0"></i>
         </a>
       </div>
 
@@ -305,7 +351,7 @@
   <div class="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-[#050505] via-[#050505]/95 to-transparent z-40">
     <div class="max-w-md mx-auto">
       <button id="btnContinue" onclick="nextStep()"
-        class="w-full bg-[#0a0a0d] border-2 border-neon text-neon text-lg font-bold py-4 rounded-[2rem] shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 focus:outline-none hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:bg-brand-neon/5">
+        class="w-full bg-[#0a0a0d] border-2 border-neon text-neon text-lg font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 focus:outline-none hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:bg-brand-neon/5">
         Continuar <i class="ph-bold ph-arrow-right text-xl"></i>
       </button>
     </div>
@@ -349,35 +395,41 @@
       });
 
       Object.keys(categories).forEach(cat => {
-        // Contenedor de la categoría (útil para el filtro de pills)
         const catContainer = document.createElement('div');
         catContainer.className = "category-section col-span-2 mb-2";
         catContainer.dataset.category = cat;
-        
-        // Título de la colección/categoría
-        catContainer.innerHTML = `<h3 class="text-lg font-bold text-white mb-4 pl-1 border-l-4 border-neon rounded-sm">${cat}</h3>`;
-        
-        // Grid interno para los servicios de esta categoría
+
+        // Título de categoría con separador integrado
+        catContainer.innerHTML = `
+          <div class="flex items-center gap-3 mb-5">
+            <span class="h-px flex-1 bg-white/10"></span>
+            <h3 class="font-display text-[11px] font-semibold text-gray-400 uppercase tracking-[0.2em] px-1">${cat}</h3>
+            <span class="h-px flex-1 bg-white/10"></span>
+          </div>`;
+
         const innerGrid = document.createElement('div');
         innerGrid.className = "grid grid-cols-2 gap-4";
-        
+
         categories[cat].forEach((s, i) => {
           const icon = _ICONS[i % _ICONS.length];
+          const hasBg = !!s.imagenUrl;
           innerGrid.innerHTML += `
             <button onclick="selectService(this)" data-service-id="${s.id}" data-category="${cat}"
-              class="service-option relative flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
-              <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
-              <div class="icon-bg w-14 h-14 rounded-full bg-[#111115] border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-4 transition-all relative z-10">
-                <i class="icon-svg ph ${icon} text-3xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
+              class="service-option relative flex flex-col items-center justify-center p-5 rounded-lg bg-[#0a0a0d] border border-brand-accent/20 shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group service-card-bg"
+              ${hasBg ? `style="background-image:url('${s.imagenUrl}')"` : ''}>
+              <div class="absolute inset-0 bg-black/${hasBg ? '80' : '0'} group-hover:bg-black/${hasBg ? '70' : '0'} transition-colors pointer-events-none"></div>
+              <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors pointer-events-none"></div>
+              <div class="icon-bg w-12 h-12 rounded-md bg-[#111115]/80 border border-brand-accent/20 shadow-[0_0_10px_rgba(255,255,255,0.05)] flex items-center justify-center mb-3 transition-all relative z-10">
+                <i class="icon-svg ph ${icon} text-2xl text-brand-neon drop-shadow-[0_0_5px_rgba(255,255,255,0.35)] transition-all"></i>
               </div>
-              <span class="font-bold text-gray-200 text-sm mb-1 relative z-10 tracking-wide">${s.nombre}</span>
-              <span class="text-[14px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
-              <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/60 duration-tag transition-all relative z-10">
-                <i class="ph ph-clock text-[13px]"></i>${formatDuration(s.duracion)}
+              <span class="font-display font-semibold text-gray-200 text-sm mb-1 relative z-10 leading-tight">${s.nombre}</span>
+              <span class="text-[13px] font-bold text-neon price-tag transition-all mb-1 relative z-10">$${s.precio.toLocaleString('es-CL')}</span>
+              <span class="flex items-center gap-1 text-[11px] font-medium text-brand-neon/55 duration-tag transition-all relative z-10">
+                <i class="ph ph-clock text-[12px]"></i>${formatDuration(s.duracion)}
               </span>
             </button>`;
         });
-        
+
         catContainer.appendChild(innerGrid);
         grid.appendChild(catContainer);
       });
@@ -399,7 +451,7 @@
       categories.forEach((cat, index) => {
         const isActive = index === 0;
         const btn = document.createElement('button');
-        btn.className = `category-pill flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-bold border transition-all active:scale-95 ${isActive ? 'bg-brand-neon/10 border-neon text-neon shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'bg-[#0a0a0d] border-brand-accent/20 text-gray-400 hover:border-brand-neon/50 hover:text-gray-200'}`;
+        btn.className = `category-pill flex-shrink-0 px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest border transition-all active:scale-95 ${isActive ? 'bg-brand-neon/10 border-neon text-neon shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'bg-[#0a0a0d] border-brand-accent/20 text-gray-400 hover:border-brand-neon/50 hover:text-gray-200'}`;
         btn.textContent = cat;
         btn.onclick = () => {
           document.querySelectorAll('.category-pill').forEach(el => {
@@ -474,10 +526,10 @@
         const isAvailableIcon = b.disponible !== false ? 'check-circle' : 'x-circle';
 
         return `
-        <button onclick="selectBarber(this, '${b.id}', '${b.nombre}')" class="barber-option relative flex w-full flex-col items-center justify-center p-6 rounded-2xl border-2 ${stateClass} shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
+        <button onclick="selectBarber(this, '${b.id}', '${b.nombre}')" class="barber-option relative flex w-full flex-col items-center justify-center p-6 rounded-lg border-2 ${stateClass} shadow-sm hover:border-brand-neon/50 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] active:scale-95 text-center transition-all overflow-hidden group">
           <div class="absolute inset-0 bg-brand-neon/0 group-hover:bg-brand-neon/5 transition-colors"></div>
           ${fotoHTML}
-          <span class="font-bold text-gray-100 text-lg mb-0.5 relative z-10 tracking-wide">${b.nombre}</span>
+          <span class="font-display font-bold text-gray-200 text-lg mb-0.5 relative z-10 tracking-wide">${b.nombre}</span>
           ${especialidadHTML}
           <span class="flex items-center gap-1.5 text-[13px] font-bold text-brand-neon relative z-10 mt-1">
             <i class="ph-fill ph-${isAvailableIcon} text-[16px]"></i>
@@ -579,7 +631,7 @@
             firstSelectableSet = true;
           }
 
-          carousel.innerHTML += `<button onclick="handleDayClick(this, '${dateStr}')" class="day-btn ${activeClass} flex-shrink-0 w-16 h-[5.5rem] rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 cursor-pointer border">
+          carousel.innerHTML += `<button onclick="handleDayClick(this, '${dateStr}')" class="day-btn ${activeClass} flex-shrink-0 w-16 h-[5.5rem] rounded-lg flex flex-col items-center justify-center transition-all active:scale-95 cursor-pointer border">
                 <span class="text-[11px] font-semibold uppercase tracking-wide mb-1 ${textSpan1} transition-all">${daysOfWeek[dw]}</span>
                 <span class="text-2xl font-bold ${textSpan2} day-num transition-all">${d.getDate()}</span>
                 <div class="dot h-1.5 w-1.5 rounded-full mt-1.5 ${dotClass} transition-all"></div>
@@ -653,9 +705,9 @@
 
       hours.forEach(h => {
         if (h.occupied) {
-          grid.innerHTML += `<button class="px-6 py-3 rounded-[1rem] border border-gray-800 bg-[#0a0a0d] text-[15px] font-medium text-gray-600 line-through pointer-events-none opacity-40 shadow-inner">${h.time}</button>`;
+          grid.innerHTML += `<button class="px-5 py-2.5 rounded-md border border-gray-800 bg-[#0a0a0d] text-[14px] font-medium text-gray-600 line-through pointer-events-none opacity-40 shadow-inner">${h.time}</button>`;
         } else {
-          grid.innerHTML += `<button onclick="selectTime(this, '${h.time}')" class="time-pill px-6 py-3 rounded-[1rem] border border-brand-accent/20 bg-[#0a0a0d] shadow-[0_0_5px_rgba(0,0,0,0.5)] text-[15px] font-bold text-gray-300 transition-all active:scale-95 hover:border-neon hover:shadow-[0_0_10px_rgba(255,255,255,0.15)] hover:text-neon focus:outline-none">${h.time}</button>`;
+          grid.innerHTML += `<button onclick="selectTime(this, '${h.time}')" class="time-pill px-5 py-2.5 rounded-md border border-brand-accent/20 bg-[#0a0a0d] shadow-[0_0_5px_rgba(0,0,0,0.5)] text-[14px] font-bold text-gray-300 transition-all active:scale-95 hover:border-neon hover:shadow-[0_0_10px_rgba(255,255,255,0.15)] hover:text-neon focus:outline-none">${h.time}</button>`;
         }
       });
     }
