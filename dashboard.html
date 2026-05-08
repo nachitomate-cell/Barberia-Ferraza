@@ -55,15 +55,6 @@
     .masonry-grid { columns: 2; column-gap: 0.75rem; }
     .masonry-item { break-inside: avoid; margin-bottom: 0.75rem; }
 
-    /* Lookbook — B&W editorial por defecto, color en hover/active */
-    .lb-photo {
-      filter: grayscale(100%);
-      transition: filter 0.35s ease, transform 0.2s ease;
-      display: block;
-      width: 100%;
-      object-fit: cover;
-    }
-    .lb-photo:hover, .lb-photo:active { filter: grayscale(0%); }
 
     /* Bottom nav active indicator */
     .nav-tab { transition: all 0.2s; }
@@ -688,7 +679,7 @@ function initLookbook() {
         return `
           <div class="masonry-item rounded-md overflow-hidden border border-white/8 bg-brand-card">
             <img src="${url}" loading="lazy"
-                 class="lb-photo"
+                 class="w-full object-cover block"
                  onerror="this.parentElement.remove()">
           </div>`;
       }).join('');
