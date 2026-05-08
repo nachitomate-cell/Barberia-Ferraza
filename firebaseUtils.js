@@ -330,11 +330,12 @@ const FDB = (() => {
         throw new Error('Este horario ya fue tomado. Por favor selecciona otra hora.');
       }
       tx.set(slotRef, {
-        fecha:     cita.fecha,
-        hora:      cita.hora,
-        barberoId: cita.barberoId || '',
-        citaId:    citaRef.id,
-        creadoEn:  firebase.firestore.FieldValue.serverTimestamp(),
+        fecha:            cita.fecha,
+        hora:             cita.hora,
+        barberoId:        cita.barberoId || '',
+        duracionServicio: Number(cita.duracionServicio) || 30,
+        citaId:           citaRef.id,
+        creadoEn:         firebase.firestore.FieldValue.serverTimestamp(),
       });
       tx.set(citaRef, {
         fecha:            cita.fecha            || '',
@@ -484,49 +485,47 @@ const FDB = (() => {
   async function getHorasDisponibles(fecha, duracionServicio, configOverride = null, barberoId = null) {
     const cfg = configOverride || await getConfig();
 
-    // Cargar citas, bloqueos y slots en paralelo — lecturas directas de Firestore sin caché local
-    // Los slots se leen con fallback vacío por si las reglas no permiten lectura pública
+    // slots es la fuente pública de verdad (sin PII, readable sin auth).
+    // citas se intenta leer también (barberos autenticados), con fallback silencioso si no hay permiso.
     const [citas, bloqueos, slotsSnap] = await Promise.all([
-      getCitas(fecha),
+      getCitas(fecha).catch(() => []),
       getBloqueosDia(fecha),
-      db.collection('slots').where('fecha', '==', fecha).get().catch(() => ({ docs: [] })),
+      db.collection('slots').where('fecha', '==', fecha).get(),
     ]);
 
-    // Horas bloqueadas por slots (segunda fuente de verdad, complementa a citas)
-    const horasConSlot = new Set(
-      slotsSnap.docs
-        .map(d => d.data())
-        .filter(s => !barberoId || s.barberoId === barberoId || !s.barberoId)
-        .map(s => s.hora)
-    );
-
-    // Día completamente bloqueado → sin slots
     if (bloqueos.some(b => b.todo_el_dia)) return [];
 
     const toMins  = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     const fromMin = m => `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
 
-    // Horario específico del día (si está configurado)
     const dw  = new Date(fecha + 'T12:00:00').getDay();
     const dc  = (cfg.diasConfig || {})[dw] || {};
     const ini = toMins(dc.inicio || cfg.horarioInicio || '09:00');
     const fin = toMins(dc.fin    || cfg.horarioFin    || '20:00');
     const interval = cfg.intervaloMinutos || 30;
 
-    // Filtrar citas por barbero. También se incluyen citas sin barberoId (citas antiguas
-    // sin el campo) para no dejar slots vacíos por error de migración.
+    // Ocupados desde citas (solo disponible para barberos; para clientes será [])
     const citasFiltradas = barberoId
       ? citas.filter(c => c.barberoId === barberoId || !c.barberoId)
       : citas;
-
-    const ocupados = citasFiltradas
+    const ocupadosCitas = citasFiltradas
       .filter(c => c.estado !== 'Cancelada')
-      .map(c => ({
-        start: toMins(c.hora),
-        end:   toMins(c.hora) + parseInt(c.duracionServicio),
-      }));
+      .map(c => ({ start: toMins(c.hora), end: toMins(c.hora) + parseInt(c.duracionServicio) }));
 
-    // Rangos de bloqueo manual parciales
+    // Ocupados desde slots (fuente principal para clientes — pública, incluye duracion)
+    const slotDocs = slotsSnap.docs.map(d => d.data())
+      .filter(s => !barberoId || s.barberoId === barberoId || !s.barberoId);
+    const ocupadosSlots = slotDocs.map(s => ({
+      start: toMins(s.hora),
+      end:   toMins(s.hora) + (parseInt(s.duracionServicio) || interval),
+    }));
+
+    // Unión: cada rango de slots que no esté ya cubierto por citas
+    const ocupados = [...ocupadosCitas];
+    ocupadosSlots.forEach(sr => {
+      if (!ocupadosCitas.some(cr => cr.start === sr.start)) ocupados.push(sr);
+    });
+
     const rangosBloq = bloqueos
       .filter(b => !b.todo_el_dia && b.hora_inicio && b.hora_fin)
       .map(b => ({ start: toMins(b.hora_inicio), end: toMins(b.hora_fin) }));
@@ -538,26 +537,15 @@ const FDB = (() => {
     while (cur + parseInt(duracionServicio) <= fin) {
       const slotEnd = cur + parseInt(duracionServicio);
 
-      // Saltar colación (si el servicio solapa el rango de colación)
       if (col) {
         const colS = toMins(col.inicio), colE = toMins(col.fin);
-        if (cur < colE && slotEnd > colS) {
-          cur += interval;
-          continue;
-        }
+        if (cur < colE && slotEnd > colS) { cur += interval; continue; }
       }
 
-      // Saltar bloqueo manual parcial (si el servicio solapa el rango de bloqueo)
-      const bloqueado = rangosBloq.some(r => cur < r.end && slotEnd > r.start);
-      if (bloqueado) {
-        cur += interval;
-        continue;
-      }
+      if (rangosBloq.some(r => cur < r.end && slotEnd > r.start)) { cur += interval; continue; }
 
       const slotTime = fromMin(cur);
-      const occupied = horasConSlot.has(slotTime) || ocupados.some(o =>
-        cur < o.end && (cur + parseInt(duracionServicio)) > o.start
-      );
+      const occupied = ocupados.some(o => cur < o.end && slotEnd > o.start);
       slots.push({ time: slotTime, occupied });
       cur += interval;
     }
@@ -742,7 +730,7 @@ const FDB = (() => {
      Garantiza que citas creadas antes de addCitaAtomica tengan su lock en 'slots/'.
      ────────────────────────────────────────────────────────────── */
   async function backfillSlots() {
-    const FLAG = 'slots_backfill_v1';
+    const FLAG = 'slots_backfill_v2';
     if (localStorage.getItem(FLAG)) return 0;
     try {
       const hoy  = new Date().toISOString().slice(0, 10);
@@ -755,6 +743,7 @@ const FDB = (() => {
         batch.set(
           db.collection('slots').doc(_slotId(d.fecha, d.barberoId, d.hora)),
           { fecha: d.fecha, hora: d.hora, barberoId: d.barberoId || '',
+            duracionServicio: Number(d.duracionServicio) || 30,
             citaId: doc.id, migrado: true,
             creadoEn: firebase.firestore.FieldValue.serverTimestamp() },
           { merge: true }
